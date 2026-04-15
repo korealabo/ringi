@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社内稟議システム | 株式会社ケイラボ</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .card {
+    background: #fff;
+    border: 0.5px solid #e0ddd5;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: #888; letter-spacing: 0.06em;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 0.5px solid #e8e5de;
+  }
+  input, select, textarea {
+    width: 100%; padding: 8px 11px; font-size: 13px;
+    border: 0.5px solid #d5d2ca; border-radius: 8px;
+    background: #fff; color: #1a1a1a; outline: none;
+    font-family: inherit; transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #999; }
+  input[type=radio] { width: auto; margin: 0; accent-color: #1a1a1a; }
+  input[type=checkbox] { width: auto; accent-color: #1a1a1a; }
+  btn { display: inline-block; }
+  button {
+    padding: 8px 16px; font-size: 13px; border-radius: 8px; cursor: pointer;
+    border: 0.5px solid #ccc; background: #fff; color: #1a1a1a;
+    font-family: inherit; transition: background 0.12s;
+  }
+  button:hover { background: #f5f4f0; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary {
+    background: #1a1a1a; color: #fff; border-color: #1a1a1a; font-weight: 500;
+  }
+  button.primary:hover { background: #333; }
+  button.danger { color: #a32d2d; border-color: #f09595; background: #fff; }
+  button.danger:hover { background: #fcebeb; }
+  button.success { color: #3b6d11; border-color: #97c459; background: #eaf3de; }
+  button.warn { color: #854f0b; border-color: #fac775; background: #faeeda; }
+  .row {
+    display: grid; grid-template-columns: 140px 1fr;
+    gap: 8px 16px; padding: 11px 0;
+    border-bottom: 0.5px solid #eee; align-items: start;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label { font-size: 13px; color: #888; font-weight: 500; padding-top: 7px; }
+  .req { color: #a32d2d; }
+  .err { font-size: 12px; color: #a32d2d; margin-top: 4px; }
+  .notify {
+    padding: 10px 14px; border-radius: 8px;
+    margin-bottom: 14px; font-size: 13px; line-height: 1.6;
+  }
+  .notify.success { background: #eaf3de; color: #3b6d11; }
+  .notify.error { background: #fcebeb; color: #a32d2d; }
+  .notify.info { background: #e6f1fb; color: #185fa5; }
+  .badge {
+    display: inline-block; font-size: 11px; padding: 3px 10px;
+    border-radius: 6px; font-weight: 500;
+  }
+  .badge-pending { background: #faeeda; color: #854f0b; }
+  .badge-approved { background: #eaf3de; color: #3b6d11; }
+  .badge-returned { background: #fcebeb; color: #a32d2d; }
+  .app-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem; padding-bottom: 1rem;
+    border-bottom: 0.5px solid #e0ddd5;
+  }
+  .app-title-sub { font-size: 11px; color: #aaa; letter-spacing: 0.12em; margin-bottom: 2px; }
+  .app-title { font-size: 22px; font-weight: 500; }
+  .list-item {
+    background: #fff; border: 0.5px solid #e0ddd5; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 8px; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .list-item:hover { border-color: #b0aca0; }
+  .recipient-bar {
+    background: #e6f1fb; border-radius: 10px;
+    padding: 12px 16px; font-size: 13px; color: #185fa5; margin-top: 4px;
+  }
+  .setup-step {
+    display: flex; gap: 12px; padding: 10px 0;
+    border-bottom: 0.5px solid #eee;
+  }
+  .setup-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #1a1a1a; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 1px;
+  }
+  @media (max-width: 600px) {
+    .row { grid-template-columns: 1fr; }
+    .row-label { padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ── Constants ── */
+
+const APPROVERS = [
+  { name: "安武専務",  role: "専務取締役", key: "yasutakeEmail" },
+  { name: "嚴宥美代表", role: "代表取締役", key: "eomEmail" },
+];
+const DEFAULT_SETTINGS = {
+  yasutakeEmail: "info@korea-labo.com",
+  eomEmail: "yumi@korea-labo.com",
+  emailjsServiceId: "service_64db3nr",
+  emailjsTemplateId: "template_pxbiqdi",
+  emailjsPublicKey: "Fq3I6k806Lj82-huC",
+};
+
+/* ── EmailJS Init ── */
+(function initEmailJS() {
+  const key = "Fq3I6k806Lj82-huC";
+  if (typeof emailjs !== "undefined") {
+    emailjs.init(key);
+    console.log("EmailJS initialized OK");
+  } else {
+    console.error("EmailJS not loaded!");
+  }
+})();
+
+/* ── Storage (localStorage) ── */
+const store = {
+  get: (key) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
+/* ── Utils ── */
+const fmt = (v) => { const n = parseInt(v); return isNaN(n) ? "―" : "¥" + n.toLocaleString(); };
+
+function Badge({ status }) {
+  const cls = status === "承認済" ? "badge-approved" : status === "差戻し" ? "badge-returned" : "badge-pending";
+  return <span className={`badge ${cls}`}>{status}</span>;
+}
+
+function Notify({ msg }) {
+  if (!msg) return null;
+  return <div className={`notify ${msg.type}`}>{msg.text}</div>;
+}
+
+/* ── Email (EmailJS) ── */
+async function sendEmail(to, toName, subject, message, settings) {
+  const { emailjsServiceId, emailjsTemplateId, emailjsPublicKey } = settings;
+  if (!emailjsServiceId || !emailjsTemplateId || !emailjsPublicKey) {
+    throw new Error("EmailJS未設定");
+  }
+  const now = new Date().toLocaleString("ja-JP");
+  const result = await emailjs.send(
+    emailjsServiceId,
+    emailjsTemplateId,
+    { to_email: to, subject: subject, message: message, name: toName, email: to, time: now }
+  );
+  return result;
+}
+
+async function sendEmailToAll(recipients, subject, body, settings) {
+  const sid = settings.emailjsServiceId || "service_64db3nr";
+  const tid = settings.emailjsTemplateId || "template_pxbiqdi";
+  const key = settings.emailjsPublicKey || "Fq3I6k806Lj82-huC";
+  const ccEmails = recipients.map(r => r.email).filter(Boolean).join(",");
+  const names = recipients.map(r => r.name).join("、");
+  const now = new Date().toLocaleString("ja-JP");
+  try {
+    emailjs.init(key);
+    const result = await emailjs.send(sid, tid, {
+      subject: subject,
+      message: body,
+      cc_emails: ccEmails,
+      name: names,
+      email: ccEmails,
+      time: now
+    });
+    console.log("EmailJS OK:", result);
+    return { ok: recipients.length, fail: [], errors: [] };
+  } catch(e) {
+    console.error("EmailJS error:", e);
+    const errMsg = e.text || e.message || JSON.stringify(e) || String(e);
+    return { ok: 0, fail: recipients.map(r => r.name), errors: [errMsg] };
+  }
+}
+
+function collectRecipients(app, settings) {
+  const map = {};
+  if (app.applicantEmail) map[app.applicantEmail] = { name: app.applicantName, role: "申請者" };
+  (app.staff || []).forEach(s => { if (s.email) map[s.email] = { name: s.name, role: "関係者" }; });
+  APPROVERS.forEach(a => { if (settings[a.key]) map[settings[a.key]] = { name: a.name, role: a.role }; });
+  return Object.entries(map).map(([email, info]) => ({ email, ...info }));
+}
+
+async function sendToAll(recipients, subject, body, settings) {
+  if (recipients.length === 0) return { ok: 0, fail: [], errors: [] };
+  return await sendEmailToAll(recipients, subject, body, settings);
+}
+
+function buildSubmitBody(app) {
+  return `${app.applicantName}より稟議申請が提出されました。ご確認をお願いいたします。
+
+■ 件名：${app.title}
+■ 起案日：${app.applicationDate}
+■ 関連ブランド：${app.brand}
+■ 申請金額：${fmt(app.amount)}（${app.taxIncluded === "included" ? "税込" : "税抜"}）
+■ 費用回収：${app.costRecovery === "yes" ? `あり（予定日：${app.costRecoveryDate}）` : "なし"}
+■ 収益見込み：${app.hasRevenue === "yes" ? `あり（${fmt(app.revenueAmount)}）` : "なし"}
+■ 関係者：${(app.staff || []).map(s => s.name).join("、")}
+
+■ 申請内容：
+${app.content}
+
+─────────────────────
+株式会社ケイラボ 社内稟議システム`;
+}
+
+function buildResultBody(app) {
+  return `${app.title}の稟議申請が「${app.status}」になりました。
+
+■ 件名：${app.title}
+■ 起案者：${app.applicantName}
+■ ステータス：${app.status}
+■ 申請金額：${fmt(app.amount)}（${app.taxIncluded === "included" ? "税込" : "税抜"}）
+
+─────────────────────
+株式会社ケイラボ 社内稟議システム`;
+}
+
+/* ── PDF Download ── */
+function downloadPDF(app) {
+  const staffList = (app.staff || []).map(s => s.name || s).join("　／　");
+  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+<title>稟議書_${app.title || app.applicantName}</title>
+<style>
+@page{margin:20mm;}
+body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;font-size:11pt;color:#000;max-width:800px;margin:0 auto;}
+h1{font-size:17pt;text-align:center;margin-bottom:4px;}
+table{width:100%;border-collapse:collapse;margin:12px 0;}
+td{padding:8px 12px;border:1px solid #bbb;font-size:10.5pt;vertical-align:top;}
+td.lbl{background:#f0f0f0;font-weight:bold;width:130px;white-space:nowrap;}
+.stamp td{border:1px solid #000;text-align:center;width:90px;}
+.stamp-name{padding:5px;border-bottom:1px solid #ccc;font-size:10pt;}
+.stamp-box{height:70px;display:flex;align-items:center;justify-content:center;color:#ddd;font-size:9pt;}
+.footer{margin-top:40px;text-align:center;font-size:9pt;color:#aaa;}
+pre{font-family:inherit;margin:0;white-space:pre-wrap;}
+</style></head><body>
+<h1>稟議書</h1>
+<div style="text-align:right;font-size:9pt;color:#888;margin-bottom:8px">提出日：${(app.submittedAt || "").split("T")[0] || app.applicationDate}　ステータス：${app.status}</div>
+<table>
+<tr><td class="lbl">起案日</td><td>${app.applicationDate}</td><td class="lbl">起案者</td><td>${app.applicantName}</td></tr>
+<tr><td class="lbl">件名</td><td colspan="3"><strong>${app.title || ""}</strong></td></tr>
+<tr><td class="lbl">関連ブランド</td><td>${app.brand}</td><td class="lbl">申請金額</td><td><strong>${fmt(app.amount)}</strong>（${app.taxIncluded === "included" ? "税込" : "税抜"}）</td></tr>
+<tr><td class="lbl">費用回収</td><td>${app.costRecovery === "yes" ? `あり（予定日：${app.costRecoveryDate}）` : "なし"}</td><td class="lbl">収益見込み</td><td>${app.hasRevenue === "yes" ? `あり（${fmt(app.revenueAmount)}）` : "なし"}</td></tr>
+<tr><td class="lbl">申請内容</td><td colspan="3"><pre>${app.content}</pre></td></tr>
+<tr><td class="lbl">関係者</td><td colspan="3">${staffList}</td></tr>
+</table>
+<h3 style="margin:20px 0 8px">決裁欄</h3>
+<table class="stamp" style="width:auto;"><tr>
+${APPROVERS.map(a => `<td><div class="stamp-name">${a.name}</div><div class="stamp-box">印</div></td>`).join("")}
+</tr></table>
+<p class="footer">株式会社ケイラボ 社内稟議システム</p>
+</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `稟議書_${(app.title || app.applicantName).replace(/\s/g, "_")}_${app.applicationDate}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── StaffInput ── */
+function StaffInput({ staff, onChange }) {
+  const set = (i, k, v) => { const s = [...staff]; s[i] = { ...s[i], [k]: v }; onChange(s); };
+  const add = () => onChange([...staff, { name: "", email: "" }]);
+  const remove = (i) => { if (staff.length <= 2) return; onChange(staff.filter((_, idx) => idx !== i)); };
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", gap: "0 8px", marginBottom: 6 }}>
+        <span style={{ fontSize: 11, color: "#888" }}>氏名 <span className="req">*</span></span>
+        <span style={{ fontSize: 11, color: "#888" }}>メールアドレス（任意・入力で通知あり）</span>
+        <span />
+      </div>
+      {staff.map((s, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", gap: "0 8px", marginBottom: 8, alignItems: "center" }}>
+          <input type="text" placeholder={`関係者${i + 1}の氏名`} value={s.name || ""} onChange={e => set(i, "name", e.target.value)} />
+          <input type="email" placeholder="email@example.com" value={s.email || ""} onChange={e => set(i, "email", e.target.value)} />
+          {staff.length > 2
+            ? <button className="danger" onClick={() => remove(i)} style={{ padding: "6px 8px", fontSize: 12 }}>×</button>
+            : <div />}
+        </div>
+      ))}
+      <button onClick={add} style={{ fontSize: 12, padding: "6px 14px", marginTop: 4 }}>＋ 関係者を追加</button>
+    </div>
+  );
+}
+
+/* ── Settings View ── */
+function SettingsView({ settings, onSave, onBack }) {
+  const [s, setS] = useState({ ...settings });
+  const set = (k, v) => setS(p => ({ ...p, [k]: v }));
+  const isEmailJSReady = s.emailjsServiceId && s.emailjsTemplateId && s.emailjsPublicKey;
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div>
+          <div className="app-title-sub">株式会社ケイラボ</div>
+          <div className="app-title" style={{ fontSize: 18 }}>設定</div>
+        </div>
+        <button onClick={onBack}>← 戻る</button>
+      </div>
+
+      {/* EmailJS Setup Guide */}
+      <div className="card" style={{ background: "#f9f8f5", border: "0.5px solid #e0ddd5" }}>
+        <div className="card-title" style={{ color: isEmailJSReady ? "#3b6d11" : "#854f0b" }}>
+          {isEmailJSReady ? "✓ メール通知：設定済み" : "⚠ メール通知の初期設定（EmailJS）"}
+        </div>
+        {!isEmailJSReady && (
+          <div>
+            <p style={{ fontSize: 13, color: "#555", marginBottom: 12, lineHeight: 1.7 }}>
+              メール通知にはEmailJSの無料アカウントが必要です。月200通まで無料で使えます。
+            </p>
+            {[
+              { n: 1, title: "アカウント作成", desc: "emailjs.com にアクセスして無料アカウントを作成" },
+              { n: 2, title: "Email Service を追加", desc: "ダッシュボード → Email Services → 「Add New Service」→ Gmailを選択して連携" },
+              { n: 3, title: "Email Template を作成", desc: <>「Email Templates」→「Create New Template」<br />
+                <strong>To</strong>欄に <code style={{background:"#eee",padding:"1px 5px",borderRadius:4}}>{"{{to_email}}"}</code>、
+                <strong>Subject</strong>欄に <code style={{background:"#eee",padding:"1px 5px",borderRadius:4}}>{"{{subject}}"}</code>、
+                <strong>本文</strong>に <code style={{background:"#eee",padding:"1px 5px",borderRadius:4}}>{"{{message}}"}</code> を入力して保存
+              </> },
+              { n: 4, title: "IDをコピー", desc: "Service ID・Template ID・Public Key（Account → General）を下にペースト" },
+            ].map(step => (
+              <div key={step.n} className="setup-step">
+                <div className="step-num">{step.n}</div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{step.title}</p>
+                  <p style={{ fontSize: 12, color: "#666", lineHeight: 1.7 }}>{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* EmailJS Config */}
+      <div className="card">
+        <div className="card-title">EmailJS 設定</div>
+        <div className="row">
+          <span className="row-label">Service ID</span>
+          <input type="text" placeholder="service_xxxxxxx" value={s.emailjsServiceId || ""} onChange={e => set("emailjsServiceId", e.target.value)} style={{ maxWidth: 280 }} />
+        </div>
+        <div className="row">
+          <span className="row-label">Template ID</span>
+          <input type="text" placeholder="template_xxxxxxx" value={s.emailjsTemplateId || ""} onChange={e => set("emailjsTemplateId", e.target.value)} style={{ maxWidth: 280 }} />
+        </div>
+        <div className="row">
+          <span className="row-label">Public Key</span>
+          <input type="text" placeholder="xxxxxxxxxxxxxxxxxxxx" value={s.emailjsPublicKey || ""} onChange={e => set("emailjsPublicKey", e.target.value)} style={{ maxWidth: 280 }} />
+        </div>
+      </div>
+
+      {/* Approver Emails */}
+      <div className="card">
+        <div className="card-title">決裁者メールアドレス</div>
+        {APPROVERS.map(a => (
+          <div key={a.key} className="row">
+            <span className="row-label">{a.name}</span>
+            <input type="email" placeholder="example@korea-labo.com" value={s[a.key] || ""} onChange={e => set(a.key, e.target.value)} style={{ maxWidth: 300 }} />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+        <button onClick={onBack}>キャンセル</button>
+        <button className="primary" onClick={() => onSave(s)}>保存する</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Form ── */
+function Form({ onSubmit, onCancel, settings }) {
+  const today = new Date().toISOString().split("T")[0];
+  const [f, setF] = useState({
+    applicationDate: today, applicantName: "", applicantEmail: "", title: "",
+    brand: "", amount: "", taxIncluded: "included", content: "",
+    costRecovery: "no", costRecoveryDate: "", hasRevenue: "no", revenueAmount: "",
+    staff: [{ name: "", email: "" }, { name: "", email: "" }],
+  });
+  const [errors, setErrors] = useState({});
+  const [sending, setSending] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const isEmailReady = settings.emailjsServiceId && settings.emailjsTemplateId && settings.emailjsPublicKey;
+  const recipientCount = collectRecipients({ ...f, staff: f.staff.filter(s => s.name.trim()) }, settings).length;
+
+  const validate = () => {
+    const e = {};
+    if (!f.applicantName.trim()) e.applicantName = "起案者名を入力してください";
+    if (!f.applicantEmail.trim()) e.applicantEmail = "申請者メールを入力してください";
+    if (!f.title.trim()) e.title = "件名を入力してください";
+    if (!f.amount) e.amount = "金額を入力してください";
+    if (!f.content.trim()) e.content = "申請内容を入力してください";
+    if (f.staff.filter(s => s.name.trim()).length < 2) e.staff = "関係者は2名以上入力してください";
+    if (f.costRecovery === "yes" && !f.costRecoveryDate) e.costRecoveryDate = "回収予定日を入力してください";
+    if (f.hasRevenue === "yes" && !f.revenueAmount) e.revenueAmount = "収益金額を入力してください";
+    setErrors(e); return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    const app = { ...f, staff: f.staff.filter(s => s.name.trim()), status: "申請中", id: Date.now().toString(), submittedAt: new Date().toISOString() };
+    setSending(true);
+    // Always try sending email with hardcoded credentials as fallback
+    const ejs = {
+      emailjsServiceId: settings.emailjsServiceId || "service_64db3nr",
+      emailjsTemplateId: settings.emailjsTemplateId || "template_pxbiqdi",
+      emailjsPublicKey: settings.emailjsPublicKey || "Fq3I6k806Lj82-huC",
+    };
+    const recs = collectRecipients(app, {
+      ...settings,
+      yasutakeEmail: settings.yasutakeEmail || "info@korea-labo.com",
+      eomEmail: settings.eomEmail || "yumi@korea-labo.com",
+    });
+    let emailMsg = "";
+    if (recs.length > 0) {
+      try {
+        const {ok, fail, errors} = await sendToAll(recs, `【稟議申請】${app.title}（${app.applicantName}より）`, buildSubmitBody(app), ejs);
+        emailMsg = fail.length === 0 ? `✅ ${ok}名全員にメール通知を送信しました！` : `❌ 送信失敗
+${(errors||[]).join("\n")}`;
+      } catch(e) {
+        emailMsg = "❌ メール送信エラー: " + (e.message || String(e));
+      }
+    } else {
+      emailMsg = "通知先のメールアドレスが未入力です。";
+    }
+    setSending(false);
+    onSubmit(app);
+    alert(emailMsg);
+  };
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div>
+          <div className="app-title-sub">株式会社ケイラボ</div>
+          <div className="app-title" style={{ fontSize: 18 }}>新規稟議申請</div>
+        </div>
+        <button onClick={onCancel}>← 戻る</button>
+      </div>
+
+      {/* 基本情報 */}
+      <div className="card">
+        <div className="card-title">基本情報</div>
+        <div className="row"><span className="row-label">起案日 <span className="req">*</span></span><input type="date" value={f.applicationDate} onChange={e => set("applicationDate", e.target.value)} style={{ maxWidth: 180 }} /></div>
+        <div className="row">
+          <span className="row-label">起案者名 <span className="req">*</span></span>
+          <div><input type="text" placeholder="例：山田 太郎" value={f.applicantName} onChange={e => set("applicantName", e.target.value)} style={{ maxWidth: 220 }} />{errors.applicantName && <p className="err">{errors.applicantName}</p>}</div>
+        </div>
+        <div className="row"><span className="row-label">申請者メール <span className="req">*</span></span><div><input type="email" placeholder="your@email.com" value={f.applicantEmail} onChange={e => set("applicantEmail", e.target.value)} style={{ maxWidth: 280 }} />{errors.applicantEmail && <p className="err">{errors.applicantEmail}</p>}</div></div>
+        <div className="row">
+          <span className="row-label">件名 <span className="req">*</span></span>
+          <div><input type="text" placeholder="申請の件名" value={f.title} onChange={e => set("title", e.target.value)} />{errors.title && <p className="err">{errors.title}</p>}</div>
+        </div>
+        <div className="row"><span className="row-label">関連ブランド</span><input type="text" placeholder="例：Cellfusion C、too cool for school など" value={f.brand} onChange={e => set("brand", e.target.value)} style={{ maxWidth: 320 }} /></div>
+        <div className="row">
+          <span className="row-label">申請金額 <span className="req">*</span></span>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 15, color: "#888" }}>¥</span>
+                <input type="text" inputMode="numeric" placeholder="0" value={f.amount ? parseInt(f.amount.replace(/,/g,"")).toLocaleString() : ""} onChange={e => { const raw = e.target.value.replace(/,/g,""); if(raw===""||/^\d+$/.test(raw)) set("amount", raw); }} style={{ width: 160 }} />
+              </div>
+              <div style={{ display: "flex", gap: 16 }}>
+                {[["included", "税込"], ["excluded", "税抜"]].map(([v, l]) => (
+                  <label key={v} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer" }}>
+                    <input type="radio" name="tax" value={v} checked={f.taxIncluded === v} onChange={() => set("taxIncluded", v)} /> {l}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {errors.amount && <p className="err">{errors.amount}</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* 申請詳細 */}
+      <div className="card">
+        <div className="card-title">申請詳細</div>
+        <div className="row" style={{ alignItems: "start" }}>
+          <span className="row-label">申請内容 <span className="req">*</span></span>
+          <div>
+            <textarea placeholder="申請の目的・使用用途・詳細を記入してください" value={f.content} onChange={e => set("content", e.target.value)} style={{ width: "100%", minHeight: 100, resize: "vertical" }} />
+            {errors.content && <p className="err">{errors.content}</p>}
+          </div>
+        </div>
+        <div className="row">
+          <span className="row-label">費用回収</span>
+          <div>
+            <div style={{ display: "flex", gap: 20, marginBottom: f.costRecovery === "yes" ? 10 : 0 }}>
+              {[["no", "回収なし"], ["yes", "回収あり"]].map(([v, l]) => (
+                <label key={v} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer" }}>
+                  <input type="radio" name="cr" value={v} checked={f.costRecovery === v} onChange={() => set("costRecovery", v)} /> {l}
+                </label>
+              ))}
+            </div>
+            {f.costRecovery === "yes" && <div><label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>費用回収予定日</label><input type="date" value={f.costRecoveryDate} onChange={e => set("costRecoveryDate", e.target.value)} style={{ maxWidth: 180 }} />{errors.costRecoveryDate && <p className="err">{errors.costRecoveryDate}</p>}</div>}
+          </div>
+        </div>
+        <div className="row">
+          <span className="row-label">収益見込み</span>
+          <div>
+            <div style={{ display: "flex", gap: 20, marginBottom: f.hasRevenue === "yes" ? 10 : 0 }}>
+              {[["no", "収益なし"], ["yes", "収益あり"]].map(([v, l]) => (
+                <label key={v} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer" }}>
+                  <input type="radio" name="rv" value={v} checked={f.hasRevenue === v} onChange={() => set("hasRevenue", v)} /> {l}
+                </label>
+              ))}
+            </div>
+            {f.hasRevenue === "yes" && <div><label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>収益見込み金額</label><div style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 15, color: "#888" }}>¥</span><input type="text" inputMode="numeric" placeholder="0" value={f.revenueAmount ? parseInt(f.revenueAmount.replace(/,/g,"")).toLocaleString() : ""} onChange={e => { const raw = e.target.value.replace(/,/g,""); if(raw===""||/^\d+$/.test(raw)) set("revenueAmount", raw); }} style={{ width: 160 }} /></div>{errors.revenueAmount && <p className="err">{errors.revenueAmount}</p>}</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* 関係者 */}
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+          <div className="card-title" style={{ margin: 0 }}>関係者 <span className="req">*</span></div>
+          <span style={{ fontSize: 11, color: "#aaa" }}>2名以上必須</span>
+        </div>
+        <div style={{ height: "0.5px", background: "#e8e5de", margin: "8px 0" }} />
+        <StaffInput staff={f.staff} onChange={v => set("staff", v)} />
+        {errors.staff && <p className="err" style={{ marginTop: 8, fontWeight: 600 }}>{errors.staff}</p>}
+      </div>
+
+      {/* 決裁者 */}
+      <div className="card">
+        <div className="card-title">決裁者（固定）</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+          {APPROVERS.map(a => (
+            <div key={a.name} style={{ background: "#f5f4f0", borderRadius: 8, padding: "10px 18px" }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>{a.name}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 11, color: settings[a.key] ? "#3b6d11" : "#a32d2d" }}>{settings[a.key] || "メール未設定"}</p>
+            </div>
+          ))}
+        </div>
+        <div className="recipient-bar">
+          ✉ 提出後の通知先：<strong>{recipientCount}名</strong>
+          {!isEmailReady && <span style={{ marginLeft: 8, fontSize: 12, color: "#a32d2d" }}>（設定でEmailJSを設定してください）</span>}
+          {isEmailReady && recipientCount === 0 && <span style={{ marginLeft: 8, fontSize: 12 }}>（メールアドレスを入力してください）</span>}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+        <button onClick={onCancel} disabled={sending}>キャンセル</button>
+        <button className="primary" onClick={handleSubmit} disabled={sending}>{sending ? "送信中..." : "申請を提出する"}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Detail ── */
+const APPROVAL_PASSWORD = "6332";
+function Detail({ appId, apps, onBack, onUpdate, onDelete, settings }) {
+  const app = apps.find(a => a.id === appId);
+  const [notify, setNotify] = useState(null);
+  const [emailSending, setEmailSending] = useState(false);
+  const [pwdModal, setPwdModal] = useState(null);
+  const [pwdInput, setPwdInput] = useState("");
+  const [pwdError, setPwdError] = useState(false);
+  if (!app) { onBack(); return null; }
+
+  const isEmailReady = settings.emailjsServiceId && settings.emailjsTemplateId && settings.emailjsPublicKey;
+  const recipients = collectRecipients(app, settings);
+
+  const openPwdModal = (status) => { setPwdModal({ status }); setPwdInput(""); setPwdError(false); };
+  const closePwdModal = () => { setPwdModal(null); setPwdInput(""); setPwdError(false); };
+  const confirmApproval = async () => {
+    if (pwdInput !== APPROVAL_PASSWORD) { setPwdError(true); return; }
+    const status = pwdModal.status;
+    closePwdModal();
+    await handleStatus(status);
+  };
+
+  const handleStatus = async (status) => {
+    const updated = { ...app, status };
+    onUpdate(app.id, status);
+    setEmailSending(true); setNotify(null);
+    let emailResult = null;
+    if (isEmailReady) {
+      const recs = collectRecipients(updated, settings);
+      if (recs.length > 0) {
+        const { ok, fail } = await sendToAll(recs, `【稟議結果】${app.title}が「${status}」になりました`, buildResultBody(updated), settings);
+        setNotify(fail.length === 0 ? { type: "success", text: `${ok}名全員に結果通知を送信しました。` } : { type: "error", text: `${ok}名へ送信完了。失敗：${fail.join("、")}` });
+      } else {
+        setNotify({ type: "info", text: `ステータスを「${status}」に更新しました。` });
+      }
+    } else {
+      setNotify({ type: "info", text: `ステータスを「${status}」に更新しました。（メール通知：EmailJS未設定）` });
+    }
+    setEmailSending(false);
+  };
+
+  const handleResend = async () => {
+    if (!isEmailReady) { setNotify({ type: "error", text: "設定でEmailJSを設定してください。" }); return; }
+    if (recipients.length === 0) { setNotify({ type: "error", text: "通知先のメールアドレスがありません。" }); return; }
+    setEmailSending(true); setNotify(null);
+    const { ok, fail } = await sendToAll(recipients, `【稟議申請】${app.title}（${app.applicantName}より）`, buildSubmitBody(app), settings);
+    setNotify(fail.length === 0 ? { type: "success", text: `${ok}名全員に再送信しました。` } : { type: "error", text: `${ok}名送信完了。失敗：${fail.join("、")}` });
+    setEmailSending(false);
+  };
+
+  const handleDelete = () => {
+    const pw = window.prompt("削除パスワードを入力してください");
+    if(pw === null) return;
+    if(pw !== "6332") { alert("パスワードが違います"); return; }
+    if(window.confirm(`「${app.title}」を削除しますか？`)) {
+      onDelete(app.id);
+      onBack();
+    }
+  };
+
+  return (
+    <div className="page">
+      <div className="app-header" style={{ flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onBack}>← 一覧へ</button>
+          <span style={{ fontSize: 18, fontWeight: 500 }}>稟議書</span>
+          <Badge status={app.status} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <button onClick={() => downloadPDF(app)}>📄 印刷用PDF</button>
+          <button onClick={handleResend} disabled={emailSending}>✉ 全員へ再送信</button>
+          <button onClick={handleDelete} style={{ color: "#a32d2d", borderColor: "#f09595" }}>🗑 削除</button>
+          {app.status === "申請中" && <>
+            <button className="success" onClick={() => openPwdModal("承認済")} disabled={emailSending}>承認する</button>
+            <button className="danger" onClick={() => openPwdModal("差戻し")} disabled={emailSending}>差戻しする</button>
+          </>}
+        </div>
+      </div>
+
+      {emailSending && <div className="notify info">メール送信中...</div>}
+      {!emailSending && notify && <Notify msg={notify} />}
+
+      {pwdModal && (
+        <div style={{position:"fixed",top:0,left:0,width:"100%",height:"100%",background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+          <div style={{background:"#fff",borderRadius:16,padding:"2rem",width:320,boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+            <p style={{fontSize:16,fontWeight:500,marginBottom:6}}>
+              {pwdModal.status === "承認済" ? "✅ 承認する" : "↩ 差戻しする"}
+            </p>
+            <p style={{fontSize:13,color:"#888",marginBottom:16}}>決裁者パスワードを入力してください</p>
+            <input
+              type="password"
+              placeholder="パスワード"
+              value={pwdInput}
+              onChange={e => { setPwdInput(e.target.value); setPwdError(false); }}
+              onKeyDown={e => e.key === "Enter" && confirmApproval()}
+              style={{width:"100%",marginBottom:8}}
+              autoFocus
+            />
+            {pwdError && <p style={{fontSize:12,color:"#a32d2d",marginBottom:8}}>パスワードが違います</p>}
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button onClick={closePwdModal} style={{flex:1}}>キャンセル</button>
+              <button onClick={confirmApproval} className={pwdModal.status === "承認済" ? "success" : "danger"} style={{flex:1}}>
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-title">基本情報</div>
+        <div className="row"><span className="row-label">起案日</span><span>{app.applicationDate}</span></div>
+        <div className="row"><span className="row-label">起案者</span><span>{app.applicantName}{app.applicantEmail && <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>{app.applicantEmail}</span>}</span></div>
+        {app.title && <div className="row"><span className="row-label">件名</span><span style={{ fontWeight: 500 }}>{app.title}</span></div>}
+        <div className="row"><span className="row-label">関連ブランド</span><span>{app.brand}</span></div>
+        <div className="row"><span className="row-label">申請金額</span><span>{fmt(app.amount)} <span style={{ fontSize: 12, color: "#888" }}>（{app.taxIncluded === "included" ? "税込" : "税抜"}）</span></span></div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">申請詳細</div>
+        <div className="row" style={{ alignItems: "start" }}><span className="row-label">申請内容</span><span style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{app.content}</span></div>
+        <div className="row"><span className="row-label">費用回収</span><span>{app.costRecovery === "yes" ? `あり（予定日：${app.costRecoveryDate}）` : "なし"}</span></div>
+        <div className="row"><span className="row-label">収益見込み</span><span>{app.hasRevenue === "yes" ? `あり（${fmt(app.revenueAmount)}）` : "なし"}</span></div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="card">
+          <div className="card-title">関係者</div>
+          {(app.staff || []).map((s, i) => {
+            const name = s.name || (typeof s === "string" ? s : ""); const email = s.email || "";
+            return <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 11, color: "#aaa", minWidth: 20 }}>{i + 1}.</span><span style={{ fontSize: 14 }}>{name}</span></div>
+              {email && <p style={{ margin: "2px 0 0 26px", fontSize: 11, color: "#3b6d11" }}>✉ {email}</p>}
+            </div>;
+          })}
+        </div>
+        <div className="card">
+          <div className="card-title">決裁者</div>
+          {APPROVERS.map(a => (
+            <div key={a.name} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e6f1fb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#185fa5", flexShrink: 0 }}>{a.name.charAt(0)}</div>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>{a.name}</p>
+                <p style={{ margin: 0, fontSize: 11, color: settings[a.key] ? "#3b6d11" : "#a32d2d" }}>{settings[a.key] || "メール未設定"}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="recipient-bar">
+        ✉ 通知対象：<strong>{recipients.length}名</strong>
+        {recipients.length > 0 && <span style={{ marginLeft: 6, fontSize: 12 }}>{recipients.map(r => `${r.name}（${r.role}）`).join(" ・ ")}</span>}
+        {recipients.length === 0 && <span style={{ marginLeft: 6, fontSize: 12, color: "#a32d2d" }}>メールアドレスが未登録です</span>}
+      </div>
+    </div>
+  );
+}
+
+/* ── List ── */
+function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport }) {
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div>
+          <div className="app-title-sub">株式会社ケイラボ</div>
+          <div className="app-title">社内稟議システム</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onSettings}>⚙ 設定</button>
+          <button onClick={onExport}>📊 CSV出力</button>
+          <button onClick={onDeleteAll} style={{ color: "#a32d2d", borderColor: "#f09595" }}>🗑 全削除</button>
+          <button className="primary" onClick={onNew}>＋ 新規申請</button>
+        </div>
+      </div>
+      {apps.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "4rem 0", color: "#aaa", fontSize: 14 }}>
+          申請書がありません。「新規申請」から作成してください。
+        </div>
+      ) : (
+        apps.map(app => (
+          <div key={app.id} className="list-item" onClick={() => onSelect(app.id)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                  <Badge status={app.status} />
+                  {app.brand && <span style={{ fontSize: 11, color: "#888", border: "0.5px solid #e0ddd5", padding: "2px 8px", borderRadius: 6 }}>{app.brand}</span>}
+                  {app.title && <span style={{ fontSize: 13, fontWeight: 500 }}>{app.title}</span>}
+                </div>
+                <p style={{ fontSize: 12, color: "#aaa", margin: 0 }}>{app.applicantName} ・ {app.applicationDate} ・ {fmt(app.amount)}（{app.taxIncluded === "included" ? "税込" : "税抜"}）</p>
+              </div>
+              <span style={{ fontSize: 18, color: "#ccc", marginLeft: 12 }}>›</span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+
+/* ── CSV Export ── */
+function exportCSV(apps) {
+  const headers = ["起案日","起案者","申請者メール","件名","関連ブランド","申請金額","税区分","費用回収","回収予定日","収益見込み","収益金額","申請内容","関係者","ステータス","提出日時"];
+  const rows = apps.map(a => [
+    a.applicationDate,
+    a.applicantName,
+    a.applicantEmail||"",
+    a.title||"",
+    a.brand||"",
+    a.amount||"",
+    a.taxIncluded==="included"?"税込":"税抜",
+    a.costRecovery==="yes"?"あり":"なし",
+    a.costRecovery==="yes"?a.costRecoveryDate:"",
+    a.hasRevenue==="yes"?"あり":"なし",
+    a.hasRevenue==="yes"?a.revenueAmount:"",
+    (a.content||"").replace(/\n/g," "),
+    (a.staff||[]).map(s=>s.name||s).join("/"),
+    a.status,
+    (a.submittedAt||"").split("T")[0]
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","));
+  const bom = "\uFEFF";
+  const csv = bom + [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `稟議一覧_${new Date().toLocaleDateString("ja-JP").replace(/\//g,"-")}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── App (Root) ── */
+function App() {
+  const [view, setView] = useState("list");
+  const [apps, setApps] = useState([]);
+  const [selId, setSelId] = useState(null);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const savedApps = store.get("klabo-ringi-apps");
+    const savedSettings = store.get("klabo-ringi-settings");
+    if (savedApps) setApps(savedApps);
+    if (savedSettings) { const merged = { ...DEFAULT_SETTINGS }; Object.keys(savedSettings).forEach(k => { if (savedSettings[k]) merged[k] = savedSettings[k]; }); setSettings(merged); }
+    setLoaded(true);
+  }, []);
+
+  const saveApps = (list) => { setApps(list); store.set("klabo-ringi-apps", list); };
+  const saveSettings = (s) => { setSettings(s); store.set("klabo-ringi-settings", s); setView("list"); };
+
+  if (!loaded) return <div style={{ padding: "3rem", textAlign: "center", color: "#aaa", fontSize: 14 }}>読み込み中...</div>;
+  if (view === "settings") return <SettingsView settings={settings} onSave={saveSettings} onBack={() => setView("list")} />;
+  if (view === "new") return <Form settings={settings} onCancel={() => setView("list")} onSubmit={(app, emailResult) => {
+  saveApps([app, ...apps]);
+  setView("list");
+  if(emailResult){
+    if(emailResult.total===0) alert("通知先メールアドレスがありません");
+    else if(emailResult.fail.length===0) alert("メール通知を" + emailResult.ok + "名に送信しました!");
+    else alert("失敗しました\nエラー: " + (emailResult.errors||[]).join("\n"));
+  }
+}} />;
+  if (view === "detail") return <Detail appId={selId} apps={apps} settings={settings} onBack={() => setView("list")} onUpdate={(id, status) => { saveApps(apps.map(a => a.id === id ? { ...a, status } : a)); }} onDelete={(id) => { saveApps(apps.filter(a => a.id !== id)); }} />;
+  return <List apps={apps} onSelect={(id) => { setSelId(id); setView("detail"); }} onNew={() => setView("new")} onSettings={() => setView("settings")}
+    onExport={() => {
+      const pw = window.prompt("パスワードを入力してください");
+      if(pw === null) return;
+      if(pw !== "6332") { alert("パスワードが違います"); return; }
+      exportCSV(apps);
+    }}
+    onDeleteAll={() => {
+      const pw = window.prompt("削除パスワードを入力してください");
+      if(pw === null) return;
+      if(pw !== "6332") { alert("パスワードが違います"); return; }
+      if(window.confirm("全ての申請書を削除しますか？この操作は取り消せません。")) { saveApps([]); }
+    }} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
