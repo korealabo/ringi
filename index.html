@@ -141,7 +141,41 @@ const DEFAULT_SETTINGS = {
   }
 })();
 
-/* ── Storage (localStorage) ── */
+/* ── Storage (JSONBin.io - shared cloud) ── */
+const JSONBIN_KEY = "$2a$10$vZ7VMUUZqAKtlQ9fqrBcmOIICIFZSZqb29oK445wVRcbZ9m/FNqKW";
+const JSONBIN_BASE = "https://api.jsonbin.io/v3";
+
+async function getBin(binId) {
+  try {
+    const res = await fetch(`${JSONBIN_BASE}/b/${binId}/latest`, {
+      headers: { "X-Master-Key": JSONBIN_KEY }
+    });
+    const data = await res.json();
+    return data.record;
+  } catch { return null; }
+}
+
+async function updateBin(binId, data) {
+  try {
+    await fetch(`${JSONBIN_BASE}/b/${binId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY },
+      body: JSON.stringify(data)
+    });
+  } catch {}
+}
+
+async function createBin(data, name) {
+  const res = await fetch(`${JSONBIN_BASE}/b`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY, "X-Bin-Name": name, "X-Bin-Private": "false" },
+    body: JSON.stringify(data)
+  });
+  const json = await res.json();
+  return json.metadata.id;
+}
+
+// localStorage fallback for settings only
 const store = {
   get: (key) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; } },
   set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
@@ -817,15 +851,38 @@ function App() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
+  const [binId, setBinId] = React.useState(null);
+
   useEffect(() => {
-    const savedApps = store.get("klabo-ringi-apps");
-    const savedSettings = store.get("klabo-ringi-settings");
-    if (savedApps) setApps(savedApps);
-    if (savedSettings) { const merged = { ...DEFAULT_SETTINGS }; Object.keys(savedSettings).forEach(k => { if (savedSettings[k]) merged[k] = savedSettings[k]; }); setSettings(merged); }
-    setLoaded(true);
+    (async () => {
+      const savedSettings = store.get("klabo-ringi-settings");
+      if (savedSettings) {
+        const merged = { ...DEFAULT_SETTINGS };
+        Object.keys(savedSettings).forEach(k => { if (savedSettings[k]) merged[k] = savedSettings[k]; });
+        setSettings(merged);
+      }
+      let bid = store.get("klabo-jsonbin-id");
+      if (bid) {
+        const data = await getBin(bid);
+        if (data && Array.isArray(data.apps)) setApps(data.apps);
+        setBinId(bid);
+      } else {
+        try {
+          const newId = await createBin({ apps: [] }, "klabo-ringi-apps");
+          store.set("klabo-jsonbin-id", newId);
+          setBinId(newId);
+          console.log("New bin created:", newId);
+        } catch(e) { console.error("JSONBin create failed:", e); }
+      }
+      setLoaded(true);
+    })();
   }, []);
 
-  const saveApps = (list) => { setApps(list); store.set("klabo-ringi-apps", list); };
+  const saveApps = async (list) => {
+    setApps(list);
+    const bid = store.get("klabo-jsonbin-id");
+    if (bid) { await updateBin(bid, { apps: list }); }
+  };
   const saveSettings = (s) => { setSettings(s); store.set("klabo-ringi-settings", s); setView("list"); };
 
   if (!loaded) return <div style={{ padding: "3rem", textAlign: "center", color: "#aaa", fontSize: 14 }}>読み込み中...</div>;
