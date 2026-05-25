@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>休暇管理システム | 株式会社ケイラボ</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .card {
+    background: #fff;
+    border: 0.5px solid #e0ddd5;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: #888; letter-spacing: 0.06em;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 0.5px solid #e8e5de;
+  }
+  input, select, textarea {
+    width: 100%; padding: 8px 11px; font-size: 13px;
+    border: 0.5px solid #d5d2ca; border-radius: 8px;
+    background: #fff; color: #1a1a1a; outline: none;
+    font-family: inherit; transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #999; }
+  input[type=radio] { width: auto; margin: 0; accent-color: #1a1a1a; }
+  input[type=checkbox] { width: auto; accent-color: #1a1a1a; }
+  button {
+    padding: 8px 16px; font-size: 13px; border-radius: 8px; cursor: pointer;
+    border: 0.5px solid #ccc; background: #fff; color: #1a1a1a;
+    font-family: inherit; transition: background 0.12s;
+  }
+  button:hover { background: #f5f4f0; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; font-weight: 500; }
+  button.primary:hover { background: #333; }
+  button.danger { color: #a32d2d; border-color: #f09595; background: #fff; }
+  button.danger:hover { background: #fcebeb; }
+  button.success { color: #3b6d11; border-color: #97c459; background: #eaf3de; }
+  .row {
+    display: grid; grid-template-columns: 150px 1fr;
+    gap: 8px 16px; padding: 11px 0;
+    border-bottom: 0.5px solid #eee; align-items: start;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label { font-size: 13px; color: #888; font-weight: 500; padding-top: 7px; }
+  .req { color: #a32d2d; }
+  .err { font-size: 12px; color: #a32d2d; margin-top: 4px; }
+  .notify { padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; line-height: 1.6; }
+  .notify.success { background: #eaf3de; color: #3b6d11; }
+  .notify.error { background: #fcebeb; color: #a32d2d; }
+  .notify.info { background: #e6f1fb; color: #185fa5; }
+  .badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 500; }
+  .badge-pending { background: #faeeda; color: #854f0b; }
+  .badge-approved { background: #eaf3de; color: #3b6d11; }
+  .badge-returned { background: #fcebeb; color: #a32d2d; }
+  .type-badge { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 500; }
+  .app-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem; padding-bottom: 1rem;
+    border-bottom: 0.5px solid #e0ddd5; flex-wrap: wrap; gap: 10px;
+  }
+  .app-title-sub { font-size: 11px; color: #aaa; letter-spacing: 0.12em; margin-bottom: 2px; }
+  .app-title { font-size: 22px; font-weight: 500; }
+  .list-item {
+    background: #fff; border: 0.5px solid #e0ddd5; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .list-item:hover { border-color: #b0aca0; }
+  .info-bar { background: #e6f1fb; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #185fa5; margin-top: 4px; }
+  .setup-step { display: flex; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid #eee; }
+  .setup-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%; background: #1a1a1a; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 1px;
+  }
+  .sync-status { font-size: 11px; color: #888; display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #3b6d11; }
+  .emp-card {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+    padding: 12px 14px; border: 0.5px solid #e8e5de; border-radius: 10px; margin-bottom: 8px; background: #fafaf8;
+  }
+  .leave-balance { font-size: 12px; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+  .balance-ok { background: #eaf3de; color: #3b6d11; }
+  .balance-low { background: #faeeda; color: #854f0b; }
+  .balance-zero { background: #fcebeb; color: #a32d2d; }
+  .tab-btn { padding: 8px 16px; border-radius: 8px 8px 0 0; border: 0.5px solid #e0ddd5; border-bottom: none; background: #efece5; cursor: pointer; font-size: 13px; }
+  .tab-btn.active { background: #fff; font-weight: 600; }
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 1fr; }
+    .row-label { padding-top: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ═══════════════════════════════════════════════════════════════
+   ⚠️ 重要：下の SHARED_BIN_ID を設定してください
+   ═══════════════════════════════════════════════════════════════
+   初回セットアップ:
+   1. このページを開く
+   2. 「初期化」画面が表示される
+   3. 「共有ストレージを作成」ボタンをクリック
+   4. 表示されたBIN IDをコピー
+   5. 下の SHARED_BIN_ID = "" の "" の中に貼り付け
+   6. GitHubにコミット → 完成！
+   ※ 稟議システムとは別のBINを使います（データが混ざらないように）
+   ═══════════════════════════════════════════════════════════════ */
+const SHARED_BIN_ID = ""; // ← ここに休暇システム用の共有BIN IDを貼り付けてください
+
+/* ── Constants ── */
+const APPROVER = { name: "嚴宥美代表", role: "代表取締役", key: "eomEmail" };
+const NOTIFY_YASUTAKE = { name: "安武専務", role: "専務取締役", key: "yasutakeEmail" };
+
+const DEFAULT_SETTINGS = {
+  yasutakeEmail: "info@korea-labo.com",
+  eomEmail: "yumi@korea-labo.com",
+  emailjsServiceId: "service_64db3nr",
+  emailjsTemplateId: "template_pxbiqdi",
+  emailjsPublicKey: "Fq3I6k806Lj82-huC",
+};
+const APPROVAL_PASSWORD = "6332";
+const ADMIN_PASSWORD = "6332";
+
+// 休暇種類の定義
+const LEAVE_TYPES = [
+  { id: "通常",     label: "通常休暇（1〜2日）",        color: "#185fa5", bg: "#e6f1fb" },
+  { id: "代休",     label: "代休（休日出勤の振替）",      color: "#0d7377", bg: "#daf0ef" },
+  { id: "長期",     label: "長期休暇（3日以上）",        color: "#6b3fa0", bg: "#f0e8fa" },
+  { id: "会社推奨", label: "会社推奨休暇（計画年休）",    color: "#854f0b", bg: "#faeeda" },
+  { id: "病気",     label: "病気休暇（病欠）",            color: "#a32d2d", bg: "#fcebeb" },
+  { id: "急",       label: "急な休み（当日連絡）",        color: "#555",    bg: "#eeece7" },
+];
+const typeInfo = (id) => LEAVE_TYPES.find(t => t.id === id) || LEAVE_TYPES[0];
+
+/* ── EmailJS Init ── */
+(function initEmailJS() {
+  const key = "Fq3I6k806Lj82-huC";
+  if (typeof emailjs !== "undefined") { emailjs.init(key); }
+})();
+
+/* ── Storage (JSONBin.io) ── */
+const JSONBIN_KEY = "$2a$10$vZ7VMUUZqAKtlQ9fqrBcmOIICIFZSZqb29oK445wVRcbZ9m/FNqKW";
+const JSONBIN_BASE = "https://api.jsonbin.io/v3";
+
+async function getBin(binId) {
+  const res = await fetch(`${JSONBIN_BASE}/b/${binId}/latest`, { headers: { "X-Master-Key": JSONBIN_KEY } });
+  if (!res.ok) throw new Error(`取得失敗 (${res.status})`);
+  const data = await res.json();
+  return data.record;
+}
+async function updateBin(binId, data) {
+  const res = await fetch(`${JSONBIN_BASE}/b/${binId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`更新失敗 (${res.status})`);
+}
+async function createBin(data, name) {
+  const res = await fetch(`${JSONBIN_BASE}/b`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY, "X-Bin-Name": name, "X-Bin-Private": "false" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`作成失敗 (${res.status})`);
+  const json = await res.json();
+  return json.metadata.id;
+}
+const store = {
+  get: (key) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
+/* ── Utils ── */
+const yn = (v) => v === "yes" ? "あり" : v === "no" ? "なし" : "―";
+const dash = (v) => (v === undefined || v === null || v === "") ? "―" : v;
+
+function Badge({ status }) {
+  const cls = status === "承認済" ? "badge-approved" : status === "差戻し" ? "badge-returned" : "badge-pending";
+  return <span className={`badge ${cls}`}>{status}</span>;
+}
+function TypeBadge({ type }) {
+  const t = typeInfo(type);
+  return <span className="type-badge" style={{ background: t.bg, color: t.color }}>{type}</span>;
+}
+function Notify({ msg }) {
+  if (!msg) return null;
+  return <div className={`notify ${msg.type}`}>{msg.text}</div>;
+}
+
+/* ── Email ── */
+async function sendEmailToAll(recipients, subject, body, settings) {
+  const sid = settings.emailjsServiceId || "service_64db3nr";
+  const tid = settings.emailjsTemplateId || "template_pxbiqdi";
+  const key = settings.emailjsPublicKey || "Fq3I6k806Lj82-huC";
+  const ccEmails = recipients.map(r => r.email).filter(Boolean).join(",");
+  const names = recipients.map(r => r.name).join("、");
+  const now = new Date().toLocaleString("ja-JP");
+  try {
+    emailjs.init(key);
+    const result = await emailjs.send(sid, tid, { subject, message: body, cc_emails: ccEmails, name: names, email: ccEmails, time: now });
+    return { ok: recipients.length, fail: [], errors: [] };
+  } catch(e) {
+    const errMsg = e.text || e.message || JSON.stringify(e) || String(e);
+    return { ok: 0, fail: recipients.map(r => r.name), errors: [errMsg] };
+  }
+}
+function collectRecipients(leave, settings) {
+  const map = {};
+  if (leave.applicantEmail) map[leave.applicantEmail] = { name: leave.applicantName, role: "申請者" };
+  if (settings.eomEmail) map[settings.eomEmail] = { name: APPROVER.name, role: APPROVER.role };
+  if (settings.yasutakeEmail) map[settings.yasutakeEmail] = { name: NOTIFY_YASUTAKE.name, role: NOTIFY_YASUTAKE.role };
+  return Object.entries(map).map(([email, info]) => ({ email, ...info }));
+}
+async function sendToAll(recipients, subject, body, settings) {
+  if (recipients.length === 0) return { ok: 0, fail: [], errors: [] };
+  return await sendEmailToAll(recipients, subject, body, settings);
+}
+
+function buildSubmitBody(lv) {
+  const t = typeInfo(lv.leaveType);
+  let extra = "";
+  if (lv.leaveType === "通常") {
+    extra = `■ 有給/無給：${lv.paidType === "paid" ? "有給" : "無給"}
+■ 事前/事後：${lv.timing === "advance" ? "事前申請" : "事後申請"}
+■ 業務引継ぎ・対応者：${dash(lv.handover)}
+■ 社用携帯の委任者：${dash(lv.phoneDelegate)}
+■ 顧客への連絡：${yn(lv.customerContact)}`;
+  } else if (lv.leaveType === "長期") {
+    extra = `■ 有給/無給：${lv.paidType === "paid" ? "有給" : "無給"}
+■ 事前/事後：${lv.timing === "advance" ? "事前申請" : "事後申請"}
+■ 業務引継ぎ・対応者：${dash(lv.handover)}
+■ 社用携帯の委任者：${dash(lv.phoneDelegate)}
+■ 顧客への連絡：${yn(lv.customerContact)}
+─── 長期休暇 特別申請 ───
+■ 長期休暇の理由：${dash(lv.longReason)}
+■ 長期休暇中の緊急連絡先：${dash(lv.longEmergencyContact)}
+■ 顧客対応者：${dash(lv.customerHandler)}
+■ 業務引継ぎ者：${dash(lv.handoverPerson)}
+■ 顧客への長期休暇案内：${yn(lv.customerNoticeLong)}`;
+  } else if (lv.leaveType === "会社推奨") {
+    extra = `■ 月次/無給：${lv.paidType === "paid" ? "月次（有給）" : "無給"}
+■ 休暇時点で滞留業務：${yn(lv.pendingWork)}
+■ 緊急連絡先：${dash(lv.emergencyContact)}
+■ 緊急連絡先の関係：${dash(lv.emergencyRelation)}`;
+  } else if (lv.leaveType === "代休") {
+    extra = `■ 出勤したイベント名：${dash(lv.eventName)}
+■ イベント実施日（出勤日）：${dash(lv.eventDate)}`;
+  } else { // 病気・急
+    extra = `■ 緊急連絡先：${dash(lv.emergencyContact)}
+■ 業務対応者：${dash(lv.handler)}`;
+  }
+  return `${lv.applicantName}より休暇申請が提出されました。ご確認をお願いいたします。
+
+■ 休暇種類：${t.label}
+■ 申請日：${lv.applicationDate}
+■ 期間：${lv.startDate} 〜 ${lv.endDate}（${lv.days}日）
+■ 申請者：${lv.applicantName}
+${lv.leaveType !== "会社推奨" ? `■ 理由：${dash(lv.reason)}\n` : ""}${lv.leaveType !== "会社推奨" && lv.leaveType !== "通常" && lv.leaveType !== "長期" ? "" : ""}${extra}
+
+─────────────────────
+株式会社ケイラボ 休暇管理システム`;
+}
+
+function buildResultBody(lv) {
+  const t = typeInfo(lv.leaveType);
+  const commentSection = lv.decisionComment ? `\n■ 承認者からのコメント：\n${lv.decisionComment}\n` : "";
+  return `${lv.applicantName}様の休暇申請が「${lv.status}」になりました。
+
+■ 休暇種類：${t.label}
+■ 期間：${lv.startDate} 〜 ${lv.endDate}（${lv.days}日）
+■ ステータス：${lv.status}
+${commentSection}
+─────────────────────
+株式会社ケイラボ 休暇管理システム`;
+}
+
+/* ── PDF / 印刷 ── */
+function downloadPDF(lv, maskEmergency) {
+  const t = typeInfo(lv.leaveType);
+  const ec = maskEmergency ? "●●●（管理者のみ閲覧）" : dash(lv.emergencyContact);
+  const lec = maskEmergency ? "●●●（管理者のみ閲覧）" : dash(lv.longEmergencyContact);
+  let detailRows = "";
+  if (lv.leaveType === "通常" || lv.leaveType === "長期") {
+    detailRows += `<tr><td class="lbl">有給/無給</td><td>${lv.paidType === "paid" ? "有給" : "無給"}</td><td class="lbl">事前/事後</td><td>${lv.timing === "advance" ? "事前申請" : "事後申請"}</td></tr>`;
+    detailRows += `<tr><td class="lbl">業務引継ぎ・対応者</td><td>${dash(lv.handover)}</td><td class="lbl">社用携帯委任者</td><td>${dash(lv.phoneDelegate)}</td></tr>`;
+    detailRows += `<tr><td class="lbl">顧客への連絡</td><td colspan="3">${yn(lv.customerContact)}</td></tr>`;
+  }
+  if (lv.leaveType === "長期") {
+    detailRows += `<tr><td class="lbl">長期休暇の理由</td><td colspan="3">${dash(lv.longReason)}</td></tr>`;
+    detailRows += `<tr><td class="lbl">長期緊急連絡先</td><td>${lec}</td><td class="lbl">顧客対応者</td><td>${dash(lv.customerHandler)}</td></tr>`;
+    detailRows += `<tr><td class="lbl">業務引継ぎ者</td><td>${dash(lv.handoverPerson)}</td><td class="lbl">顧客への案内</td><td>${yn(lv.customerNoticeLong)}</td></tr>`;
+  }
+  if (lv.leaveType === "会社推奨") {
+    detailRows += `<tr><td class="lbl">月次/無給</td><td>${lv.paidType === "paid" ? "月次（有給）" : "無給"}</td><td class="lbl">滞留業務</td><td>${yn(lv.pendingWork)}</td></tr>`;
+    detailRows += `<tr><td class="lbl">緊急連絡先</td><td>${ec}</td><td class="lbl">関係</td><td>${dash(lv.emergencyRelation)}</td></tr>`;
+  }
+  if (lv.leaveType === "代休") {
+    detailRows += `<tr><td class="lbl">出勤したイベント名</td><td>${dash(lv.eventName)}</td><td class="lbl">イベント実施日</td><td>${dash(lv.eventDate)}</td></tr>`;
+  }
+  if (lv.leaveType === "病気" || lv.leaveType === "急") {
+    detailRows += `<tr><td class="lbl">緊急連絡先</td><td>${ec}</td><td class="lbl">業務対応者</td><td>${dash(lv.handler)}</td></tr>`;
+  }
+  const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>休暇申請書_${lv.applicantName}</title>
+<style>
+@page{margin:20mm;}
+body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;font-size:11pt;color:#000;max-width:800px;margin:0 auto;}
+h1{font-size:17pt;text-align:center;margin-bottom:4px;}
+table{width:100%;border-collapse:collapse;margin:12px 0;}
+td{padding:8px 12px;border:1px solid #bbb;font-size:10.5pt;vertical-align:top;}
+td.lbl{background:#f0f0f0;font-weight:bold;width:130px;white-space:nowrap;}
+.stamp td{border:1px solid #000;text-align:center;width:110px;}
+.stamp-name{padding:5px;border-bottom:1px solid #ccc;font-size:10pt;}
+.stamp-box{height:70px;display:flex;align-items:center;justify-content:center;color:#ddd;font-size:9pt;}
+.footer{margin-top:40px;text-align:center;font-size:9pt;color:#aaa;}
+pre{font-family:inherit;margin:0;white-space:pre-wrap;}
+</style></head><body>
+<h1>休暇申請書</h1>
+<div style="text-align:right;font-size:9pt;color:#888;margin-bottom:8px">申請日：${lv.applicationDate}　ステータス：${lv.status}</div>
+<table>
+<tr><td class="lbl">休暇種類</td><td colspan="3"><strong>${t.label}</strong></td></tr>
+<tr><td class="lbl">申請者</td><td>${lv.applicantName}</td><td class="lbl">期間</td><td>${lv.startDate} 〜 ${lv.endDate}（${lv.days}日）</td></tr>
+${lv.reason ? `<tr><td class="lbl">理由</td><td colspan="3"><pre>${lv.reason}</pre></td></tr>` : ""}
+${detailRows}
+${lv.decisionComment ? `<tr><td class="lbl">承認者コメント</td><td colspan="3"><pre>${lv.decisionComment}</pre></td></tr>` : ""}
+</table>
+<h3 style="margin:20px 0 8px">承認欄</h3>
+<table class="stamp" style="width:auto;"><tr>
+<td><div class="stamp-name">${APPROVER.name}</div><div class="stamp-box">印</div></td>
+</tr></table>
+<p class="footer">株式会社ケイラボ 休暇管理システム</p>
+</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `休暇申請書_${lv.applicantName}_${lv.startDate}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── Setup Screen ── */
+function SetupScreen() {
+  const [loading, setLoading] = useState(false);
+  const [newBinId, setNewBinId] = useState(null);
+  const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const doCreate = async () => {
+    setLoading(true); setError(null);
+    try {
+      const id = await createBin({ employees: [], leaves: [] }, "klabo-kyuka-shared");
+      setNewBinId(id);
+    } catch(e) { setError(e.message || String(e)); }
+    setLoading(false);
+  };
+  const copy = () => { navigator.clipboard.writeText(newBinId); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div>
+          <div className="app-title-sub">株式会社ケイラボ</div>
+          <div className="app-title" style={{ fontSize: 20 }}>⚙️ 初期設定が必要です</div>
+        </div>
+      </div>
+      <div className="card" style={{ background: "#fff9ec", border: "0.5px solid #e8c97a" }}>
+        <div className="card-title" style={{ color: "#854f0b" }}>⚠ 共有ストレージ（BIN ID）が未設定</div>
+        <p style={{ fontSize: 13, lineHeight: 1.8, color: "#555" }}>
+          下のボタンを押すと<strong>1回だけ</strong>休暇システム専用の共有ストレージが作成されます。<br />
+          作成後、表示されるIDを kyuka.html に貼り付けてください。
+        </p>
+      </div>
+      {!newBinId && (
+        <div className="card" style={{ textAlign: "center", padding: "2rem" }}>
+          <button className="primary" onClick={doCreate} disabled={loading} style={{ fontSize: 15, padding: "14px 32px" }}>
+            {loading ? "作成中..." : "🚀 共有ストレージを作成する"}
+          </button>
+          {error && <p className="err" style={{ marginTop: 16, fontSize: 13 }}>エラー: {error}</p>}
+        </div>
+      )}
+      {newBinId && (
+        <>
+          <div className="card" style={{ background: "#eaf3de", border: "0.5px solid #97c459" }}>
+            <div className="card-title" style={{ color: "#3b6d11" }}>✅ 作成成功！</div>
+            <p style={{ fontSize: 13, color: "#555", marginBottom: 12 }}>
+              以下のIDをコピーして kyuka.html の <code style={{background:"#fff",padding:"2px 6px",borderRadius:4}}>SHARED_BIN_ID = ""</code> の <code>""</code> の中に貼り付けてください：
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input type="text" value={newBinId} readOnly style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 600, background: "#fff" }} onClick={e => e.target.select()} />
+              <button className="primary" onClick={copy} style={{ flexShrink: 0 }}>{copied ? "✓ コピー済" : "📋 コピー"}</button>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-title">次の手順</div>
+            {[
+              { n: 1, t: "GitHubの kyuka.html を編集", d: "https://github.com/korealabo/ringi/blob/main/kyuka.html を開いて鉛筆アイコンで編集" },
+              { n: 2, t: "SHARED_BIN_ID を検索", d: "Ctrl+F で「SHARED_BIN_ID」を検索（ファイル上部）" },
+              { n: 3, t: "IDを貼り付け", d: <><code style={{background:"#f5f4f0",padding:"2px 6px",borderRadius:4}}>const SHARED_BIN_ID = "";</code> の <code>""</code> の中に貼り付け</> },
+              { n: 4, t: "コミット", d: "「Commit changes」で保存" },
+              { n: 5, t: "完了", d: "1〜2分後にページを再読み込み（Ctrl+Shift+R）" },
+            ].map(s => (
+              <div key={s.n} className="setup-step">
+                <div className="step-num">{s.n}</div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{s.t}</p>
+                  <p style={{ fontSize: 12, color: "#666", lineHeight: 1.7 }}>{s.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Employee Manager（社員マスター） ── */
+function EmployeeManager({ employees, onSave, onBack }) {
+  const [list, setList] = useState(employees.map(e => ({ ...e })));
+  const [authed, setAuthed] = useState(false);
+  const [pwd, setPwd] = useState("");
+
+  const blank = () => ({ id: "emp_" + Date.now() + "_" + Math.random().toString(36).slice(2,6), name: "", email: "", department: "", joinDate: "", grantDate: "", granted: "", remaining: "" });
+  const add = () => setList([...list, blank()]);
+  const update = (i, k, v) => { const l = [...list]; l[i] = { ...l[i], [k]: v }; setList(l); };
+  const remove = (i) => { if (window.confirm(`「${list[i].name || "この社員"}」を削除しますか？`)) setList(list.filter((_, idx) => idx !== i)); };
+
+  if (!authed) {
+    return (
+      <div className="page">
+        <div className="app-header">
+          <div><div className="app-title-sub">株式会社ケイラボ</div><div className="app-title" style={{ fontSize: 18 }}>社員マスター管理</div></div>
+          <button onClick={onBack}>← 戻る</button>
+        </div>
+        <div className="card" style={{ maxWidth: 360, margin: "2rem auto", textAlign: "center" }}>
+          <p style={{ fontSize: 14, marginBottom: 14 }}>管理パスワードを入力してください</p>
+          <input type="password" value={pwd} onChange={e => setPwd(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { if (pwd === ADMIN_PASSWORD) setAuthed(true); else alert("パスワードが違います"); } }}
+            placeholder="パスワード" style={{ marginBottom: 12 }} autoFocus />
+          <button className="primary" style={{ width: "100%" }} onClick={() => { if (pwd === ADMIN_PASSWORD) setAuthed(true); else alert("パスワードが違います"); }}>確認</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div><div className="app-title-sub">株式会社ケイラボ</div><div className="app-title" style={{ fontSize: 18 }}>社員マスター管理</div></div>
+        <button onClick={onBack}>← 戻る</button>
+      </div>
+      <div className="card" style={{ background: "#f9f8f5" }}>
+        <p style={{ fontSize: 13, color: "#555", lineHeight: 1.7 }}>
+          社員ごとに入社日・有給休暇の付与日・付与数・残数を登録します。<br />
+          有給休暇を「有給」で申請して承認されると、残数から自動で差し引かれます。
+        </p>
+      </div>
+      {list.map((e, i) => (
+        <div key={e.id} className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#888" }}>社員 {i + 1}</span>
+            <button className="danger" onClick={() => remove(i)} style={{ padding: "4px 10px", fontSize: 12 }}>削除</button>
+          </div>
+          <div className="row"><span className="row-label">氏名 <span className="req">*</span></span><input type="text" placeholder="例：藤本 香乃" value={e.name} onChange={ev => update(i, "name", ev.target.value)} style={{ maxWidth: 220 }} /></div>
+          <div className="row"><span className="row-label">メール</span><input type="email" placeholder="sales@korea-labo.com" value={e.email} onChange={ev => update(i, "email", ev.target.value)} style={{ maxWidth: 280 }} /></div>
+          <div className="row"><span className="row-label">部署</span><input type="text" placeholder="例：営業部" value={e.department} onChange={ev => update(i, "department", ev.target.value)} style={{ maxWidth: 200 }} /></div>
+          <div className="row"><span className="row-label">入社日</span><input type="date" value={e.joinDate} onChange={ev => update(i, "joinDate", ev.target.value)} style={{ maxWidth: 180 }} /></div>
+          <div className="row"><span className="row-label">有給付与日</span><input type="date" value={e.grantDate} onChange={ev => update(i, "grantDate", ev.target.value)} style={{ maxWidth: 180 }} /></div>
+          <div className="row"><span className="row-label">付与数（日）</span><input type="number" step="0.5" placeholder="例：10" value={e.granted} onChange={ev => update(i, "granted", ev.target.value)} style={{ maxWidth: 120 }} /></div>
+          <div className="row"><span className="row-label">現在の残数（日）<span className="req">*</span></span><input type="number" step="0.5" placeholder="例：8" value={e.remaining} onChange={ev => update(i, "remaining", ev.target.value)} style={{ maxWidth: 120 }} /></div>
+        </div>
+      ))}
+      <button onClick={add} style={{ width: "100%", padding: 12, marginBottom: 16 }}>＋ 社員を追加</button>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button onClick={onBack}>キャンセル</button>
+        <button className="primary" onClick={() => {
+          const valid = list.filter(e => e.name.trim());
+          onSave(valid);
+        }}>保存する</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Settings ── */
+function SettingsView({ settings, onSave, onBack }) {
+  const [s, setS] = useState({ ...settings });
+  const set = (k, v) => setS(p => ({ ...p, [k]: v }));
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div><div className="app-title-sub">株式会社ケイラボ</div><div className="app-title" style={{ fontSize: 18 }}>設定</div></div>
+        <button onClick={onBack}>← 戻る</button>
+      </div>
+      <div className="card">
+        <div className="card-title">EmailJS 設定</div>
+        <div className="row"><span className="row-label">Service ID</span><input type="text" value={s.emailjsServiceId || ""} onChange={e => set("emailjsServiceId", e.target.value)} style={{ maxWidth: 280 }} /></div>
+        <div className="row"><span className="row-label">Template ID</span><input type="text" value={s.emailjsTemplateId || ""} onChange={e => set("emailjsTemplateId", e.target.value)} style={{ maxWidth: 280 }} /></div>
+        <div className="row"><span className="row-label">Public Key</span><input type="text" value={s.emailjsPublicKey || ""} onChange={e => set("emailjsPublicKey", e.target.value)} style={{ maxWidth: 280 }} /></div>
+      </div>
+      <div className="card">
+        <div className="card-title">通知先メールアドレス</div>
+        <div className="row"><span className="row-label">{APPROVER.name}（承認者）</span><input type="email" value={s.eomEmail || ""} onChange={e => set("eomEmail", e.target.value)} style={{ maxWidth: 300 }} /></div>
+        <div className="row"><span className="row-label">{NOTIFY_YASUTAKE.name}</span><input type="email" value={s.yasutakeEmail || ""} onChange={e => set("yasutakeEmail", e.target.value)} style={{ maxWidth: 300 }} /></div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button onClick={onBack}>キャンセル</button>
+        <button className="primary" onClick={() => onSave(s)}>保存する</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Leave Form ── */
+function LeaveForm({ employees, onSubmit, onCancel, settings }) {
+  const today = new Date().toISOString().split("T")[0];
+  const [f, setF] = useState({
+    applicationDate: today, applicantId: "", applicantName: "", applicantEmail: "",
+    leaveType: "通常", startDate: "", endDate: "", days: "",
+    reason: "", emergencyContact: "",
+    paidType: "paid", timing: "advance",
+    handover: "", phoneDelegate: "", customerContact: "no",
+    longReason: "", longEmergencyContact: "", customerHandler: "", handoverPerson: "", customerNoticeLong: "no",
+    pendingWork: "no", emergencyRelation: "",
+    handler: "",
+    eventName: "", eventDate: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [sending, setSending] = useState(false);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+
+  const selectedEmp = employees.find(e => e.id === f.applicantId);
+  const isPaidLeave = (f.leaveType === "通常" || f.leaveType === "長期" || f.leaveType === "会社推奨") && f.paidType === "paid";
+
+  const onSelectEmp = (id) => {
+    const emp = employees.find(e => e.id === id);
+    setF(p => ({ ...p, applicantId: id, applicantName: emp ? emp.name : "", applicantEmail: emp ? (emp.email || "") : "" }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!f.applicantId) e.applicantId = "申請者を選択してください";
+    if (!f.startDate) e.startDate = "開始日を入力してください";
+    if (!f.endDate) e.endDate = "終了日を入力してください";
+    if (!f.days) e.days = "取得日数を入力してください";
+    if (!f.emergencyContact.trim()) e.emergencyContact = "緊急連絡先は必須です";
+    if (f.leaveType !== "会社推奨" && f.leaveType !== "代休" && !f.reason.trim()) e.reason = "理由を入力してください";
+    if (f.leaveType === "代休" && !f.eventName.trim()) e.eventName = "出勤したイベント名を入力してください";
+    if (f.leaveType === "長期") {
+      if (!f.longReason.trim()) e.longReason = "長期休暇の理由を入力してください";
+      if (Number(f.days) < 3) e.days = "長期休暇は3日以上です";
+    }
+    setErrors(e); return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    const lv = { ...f, status: "申請中", id: Date.now().toString(), submittedAt: new Date().toISOString() };
+    setSending(true);
+    const ejs = {
+      emailjsServiceId: settings.emailjsServiceId || "service_64db3nr",
+      emailjsTemplateId: settings.emailjsTemplateId || "template_pxbiqdi",
+      emailjsPublicKey: settings.emailjsPublicKey || "Fq3I6k806Lj82-huC",
+    };
+    const recs = collectRecipients(lv, { ...settings, eomEmail: settings.eomEmail || "yumi@korea-labo.com", yasutakeEmail: settings.yasutakeEmail || "info@korea-labo.com" });
+    let emailMsg = "";
+    if (recs.length > 0) {
+      try {
+        const { ok, fail, errors } = await sendToAll(recs, `【休暇申請】${lv.applicantName}（${typeInfo(lv.leaveType).label}）`, buildSubmitBody(lv), ejs);
+        emailMsg = fail.length === 0 ? `✅ ${ok}名にメール通知を送信しました！` : `❌ 送信失敗\n${(errors||[]).join("\n")}`;
+      } catch(e) { emailMsg = "❌ メール送信エラー: " + (e.message || String(e)); }
+    } else { emailMsg = "通知先のメールアドレスが未設定です。"; }
+    try {
+      await onSubmit(lv);
+      setSending(false);
+      alert(emailMsg + "\n\n✅ クラウドに保存しました。");
+    } catch(e) { setSending(false); alert(emailMsg + "\n\n❌ クラウド保存エラー: " + (e.message || String(e))); }
+  };
+
+  const radio = (key, opts) => (
+    <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+      {opts.map(([v, l]) => (
+        <label key={v} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, cursor: "pointer" }}>
+          <input type="radio" name={key} value={v} checked={f[key] === v} onChange={() => set(key, v)} /> {l}
+        </label>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div><div className="app-title-sub">株式会社ケイラボ</div><div className="app-title" style={{ fontSize: 18 }}>休暇申請</div></div>
+        <button onClick={onCancel}>← 戻る</button>
+      </div>
+
+      {/* 休暇種類 */}
+      <div className="card">
+        <div className="card-title">休暇の種類</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {LEAVE_TYPES.map(t => (
+            <button key={t.id} onClick={() => set("leaveType", t.id)}
+              style={{ borderColor: f.leaveType === t.id ? t.color : "#ddd", background: f.leaveType === t.id ? t.bg : "#fff", color: f.leaveType === t.id ? t.color : "#666", fontWeight: f.leaveType === t.id ? 600 : 400 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 基本情報 */}
+      <div className="card">
+        <div className="card-title">基本情報</div>
+        <div className="row"><span className="row-label">申請日</span><input type="date" value={f.applicationDate} onChange={e => set("applicationDate", e.target.value)} style={{ maxWidth: 180 }} /></div>
+        <div className="row">
+          <span className="row-label">申請者 <span className="req">*</span></span>
+          <div>
+            <select value={f.applicantId} onChange={e => onSelectEmp(e.target.value)} style={{ maxWidth: 260 }}>
+              <option value="">― 社員を選択 ―</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.name}{e.department ? `（${e.department}）` : ""}</option>)}
+            </select>
+            {errors.applicantId && <p className="err">{errors.applicantId}</p>}
+            {employees.length === 0 && <p className="err">先に「社員管理」で社員を登録してください</p>}
+          </div>
+        </div>
+        {selectedEmp && isPaidLeave && (
+          <div className="row">
+            <span className="row-label">有給休暇 残数</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: Number(selectedEmp.remaining) > 0 ? "#3b6d11" : "#a32d2d" }}>
+              {dash(selectedEmp.remaining)}日 {f.days && <span style={{ fontSize: 12, color: "#888", fontWeight: 400 }}>（今回 {f.days}日 → 承認後 残 {(Number(selectedEmp.remaining) - Number(f.days || 0))}日）</span>}
+            </span>
+          </div>
+        )}
+        <div className="row">
+          <span className="row-label">期間 <span className="req">*</span></span>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <input type="date" value={f.startDate} onChange={e => set("startDate", e.target.value)} style={{ maxWidth: 170 }} />
+              <span style={{ color: "#888" }}>〜</span>
+              <input type="date" value={f.endDate} onChange={e => set("endDate", e.target.value)} style={{ maxWidth: 170 }} />
+            </div>
+            {(errors.startDate || errors.endDate) && <p className="err">{errors.startDate || errors.endDate}</p>}
+          </div>
+        </div>
+        <div className="row">
+          <span className="row-label">取得日数 <span className="req">*</span></span>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <input type="number" step="0.5" placeholder="例：1（半休は0.5）" value={f.days} onChange={e => set("days", e.target.value)} style={{ width: 160 }} />
+              <span style={{ fontSize: 13, color: "#888" }}>日</span>
+            </div>
+            {errors.days && <p className="err">{errors.days}</p>}
+          </div>
+        </div>
+        {f.leaveType !== "会社推奨" && (
+          <div className="row" style={{ alignItems: "start" }}>
+            <span className="row-label">理由 {f.leaveType === "代休" ? <span style={{ fontSize: 11, color: "#aaa", fontWeight: 400 }}>（任意）</span> : <span className="req">*</span>}</span>
+            <div><textarea placeholder="休暇の理由" value={f.reason} onChange={e => set("reason", e.target.value)} style={{ minHeight: 70, resize: "vertical" }} />{errors.reason && <p className="err">{errors.reason}</p>}</div>
+          </div>
+        )}
+        <div className="row">
+          <span className="row-label">緊急連絡先 <span className="req">*</span></span>
+          <div><input type="text" placeholder="例：090-1234-5678" value={f.emergencyContact} onChange={e => set("emergencyContact", e.target.value)} style={{ maxWidth: 240 }} />{errors.emergencyContact && <p className="err">{errors.emergencyContact}</p>}</div>
+        </div>
+      </div>
+
+      {/* 代休 情報 */}
+      {f.leaveType === "代休" && (
+        <div className="card" style={{ border: "0.5px solid #7fc7c9", background: "#eaf7f7" }}>
+          <div className="card-title" style={{ color: "#0d7377" }}>代休 情報（休日出勤の振替）</div>
+          <div className="row">
+            <span className="row-label">出勤したイベント名 <span className="req">*</span></span>
+            <div><input type="text" placeholder="例：〇〇展示会、週末イベント" value={f.eventName} onChange={e => set("eventName", e.target.value)} style={{ maxWidth: 300 }} />{errors.eventName && <p className="err">{errors.eventName}</p>}</div>
+          </div>
+          <div className="row"><span className="row-label">イベント実施日（出勤日）</span><input type="date" value={f.eventDate} onChange={e => set("eventDate", e.target.value)} style={{ maxWidth: 180 }} /></div>
+          <div className="row"><span className="row-label">業務引継ぎ・対応者</span><input type="text" placeholder="必要であれば入力" value={f.handover} onChange={e => set("handover", e.target.value)} style={{ maxWidth: 240 }} /></div>
+        </div>
+      )}
+
+      {/* 通常・長期 共通：業務関連 */}
+      {(f.leaveType === "通常" || f.leaveType === "長期") && (
+        <div className="card">
+          <div className="card-title">業務関連</div>
+          <div className="row"><span className="row-label">有給/無給</span>{radio("paidType", [["paid", "有給"], ["unpaid", "無給"]])}</div>
+          <div className="row"><span className="row-label">事前/事後</span>{radio("timing", [["advance", "事前申請"], ["after", "事後申請"]])}</div>
+          <div className="row"><span className="row-label">業務引継ぎ・対応者</span><input type="text" placeholder="引継ぎ先の氏名" value={f.handover} onChange={e => set("handover", e.target.value)} style={{ maxWidth: 240 }} /></div>
+          <div className="row"><span className="row-label">社用携帯の委任者</span><input type="text" placeholder="社用携帯を預ける人" value={f.phoneDelegate} onChange={e => set("phoneDelegate", e.target.value)} style={{ maxWidth: 240 }} /></div>
+          <div className="row"><span className="row-label">顧客への連絡完了</span>{radio("customerContact", [["yes", "連絡済み"], ["no", "連絡不要/未"]])}</div>
+        </div>
+      )}
+
+      {/* 長期休暇 特別申請 */}
+      {f.leaveType === "長期" && (
+        <div className="card" style={{ border: "0.5px solid #c9b3e0", background: "#faf7fe" }}>
+          <div className="card-title" style={{ color: "#6b3fa0" }}>長期休暇 特別申請（3日以上）</div>
+          <div className="row" style={{ alignItems: "start" }}><span className="row-label">長期休暇の理由 <span className="req">*</span></span><div><textarea placeholder="長期休暇の詳しい理由" value={f.longReason} onChange={e => set("longReason", e.target.value)} style={{ minHeight: 60, resize: "vertical" }} />{errors.longReason && <p className="err">{errors.longReason}</p>}</div></div>
+          <div className="row"><span className="row-label">長期休暇中の緊急連絡先</span><input type="text" placeholder="連絡先" value={f.longEmergencyContact} onChange={e => set("longEmergencyContact", e.target.value)} style={{ maxWidth: 240 }} /></div>
+          <div className="row"><span className="row-label">顧客対応者</span><input type="text" placeholder="顧客対応する人の氏名" value={f.customerHandler} onChange={e => set("customerHandler", e.target.value)} style={{ maxWidth: 240 }} /></div>
+          <div className="row"><span className="row-label">業務引継ぎ者</span><input type="text" placeholder="業務を引き継ぐ人" value={f.handoverPerson} onChange={e => set("handoverPerson", e.target.value)} style={{ maxWidth: 240 }} /></div>
+          <div className="row"><span className="row-label">顧客への長期休暇案内</span>{radio("customerNoticeLong", [["yes", "案内済み"], ["no", "未案内"]])}</div>
+        </div>
+      )}
+
+      {/* 会社推奨休暇 */}
+      {f.leaveType === "会社推奨" && (
+        <div className="card" style={{ border: "0.5px solid #e8c97a", background: "#fff9ec" }}>
+          <div className="card-title" style={{ color: "#854f0b" }}>会社推奨休暇（計画年休）</div>
+          <div className="row"><span className="row-label">月次/無給</span>{radio("paidType", [["paid", "月次（有給）"], ["unpaid", "無給"]])}</div>
+          <div className="row"><span className="row-label">休暇時点で滞留業務</span>{radio("pendingWork", [["yes", "あり"], ["no", "なし"]])}</div>
+          <div className="row"><span className="row-label">緊急連絡先の関係</span><input type="text" placeholder="例：家族、同僚など" value={f.emergencyRelation} onChange={e => set("emergencyRelation", e.target.value)} style={{ maxWidth: 240 }} /></div>
+        </div>
+      )}
+
+      {/* 病気・急 */}
+      {(f.leaveType === "病気" || f.leaveType === "急") && (
+        <div className="card">
+          <div className="card-title">業務対応</div>
+          <div className="row"><span className="row-label">業務対応者</span><input type="text" placeholder="代わりに対応する人" value={f.handler} onChange={e => set("handler", e.target.value)} style={{ maxWidth: 240 }} /></div>
+        </div>
+      )}
+
+      {/* 通知先 */}
+      <div className="info-bar">
+        ✉ 提出後の通知先：<strong>申請者・{APPROVER.name}・{NOTIFY_YASUTAKE.name}</strong>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+        <button onClick={onCancel} disabled={sending}>キャンセル</button>
+        <button className="primary" onClick={handleSubmit} disabled={sending}>{sending ? "送信中..." : "申請を提出する"}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Leave Detail ── */
+function LeaveDetail({ leaveId, leaves, employees, onBack, onUpdate, onDelete, settings }) {
+  const lv = leaves.find(l => l.id === leaveId);
+  const [notify, setNotify] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [pwdModal, setPwdModal] = useState(null);
+  const [pwdInput, setPwdInput] = useState("");
+  const [pwdError, setPwdError] = useState(false);
+  const [commentInput, setCommentInput] = useState("");
+  const [showEmergency, setShowEmergency] = useState(false);
+  if (!lv) { onBack(); return null; }
+
+  const revealEmergency = () => {
+    const pw = window.prompt("緊急連絡先を表示するには管理者パスワードを入力してください");
+    if (pw === null) return;
+    if (pw !== ADMIN_PASSWORD) { alert("パスワードが違います"); return; }
+    setShowEmergency(true);
+  };
+  const masked = (val) => showEmergency ? dash(val) : (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ letterSpacing: 3, color: "#bbb" }}>● ● ● ●</span>
+      <button onClick={revealEmergency} style={{ padding: "3px 10px", fontSize: 11 }}>🔒 表示</button>
+      <span style={{ fontSize: 11, color: "#aaa" }}>管理者のみ</span>
+    </span>
+  );
+
+  const t = typeInfo(lv.leaveType);
+  const isEmailReady = settings.emailjsServiceId && settings.emailjsTemplateId && settings.emailjsPublicKey;
+  const emp = employees.find(e => e.id === lv.applicantId);
+  const isPaidLeave = (lv.leaveType === "通常" || lv.leaveType === "長期" || lv.leaveType === "会社推奨") && lv.paidType === "paid";
+
+  const openPwd = (status) => { setPwdModal({ status }); setPwdInput(""); setPwdError(false); setCommentInput(""); };
+  const closePwd = () => { setPwdModal(null); setPwdInput(""); setPwdError(false); setCommentInput(""); };
+  const confirm = async () => {
+    if (pwdInput !== APPROVAL_PASSWORD) { setPwdError(true); return; }
+    const status = pwdModal.status;
+    if (status === "差戻し" && !commentInput.trim()) { alert("差戻しの場合は理由（コメント）を入力してください。"); return; }
+    const comment = commentInput.trim();
+    closePwd();
+    await doStatus(status, comment);
+  };
+
+  const doStatus = async (status, comment) => {
+    setBusy(true); setNotify(null);
+    const updated = { ...lv, status, decisionComment: comment || "" };
+    try {
+      await onUpdate(lv.id, status, comment || "");
+    } catch(e) { setNotify({ type: "error", text: "クラウド更新エラー: " + (e.message || String(e)) }); setBusy(false); return; }
+    if (isEmailReady) {
+      const recs = collectRecipients(updated, settings);
+      if (recs.length > 0) {
+        const { ok, fail } = await sendToAll(recs, `【休暇結果】${lv.applicantName}様の休暇が「${status}」になりました`, buildResultBody(updated), settings);
+        setNotify(fail.length === 0 ? { type: "success", text: `${ok}名に結果通知を送信しました。` } : { type: "error", text: `${ok}名へ送信完了。失敗：${fail.join("、")}` });
+      } else setNotify({ type: "info", text: `ステータスを「${status}」に更新しました。` });
+    } else setNotify({ type: "info", text: `ステータスを「${status}」に更新しました。（メール未設定）` });
+    setBusy(false);
+  };
+
+  const handleDelete = async () => {
+    const pw = window.prompt("削除パスワードを入力してください");
+    if (pw === null) return;
+    if (pw !== ADMIN_PASSWORD) { alert("パスワードが違います"); return; }
+    if (window.confirm("この休暇申請を削除しますか？")) {
+      try { await onDelete(lv.id); onBack(); } catch(e) { alert("削除エラー: " + (e.message || String(e))); }
+    }
+  };
+
+  const Row = ({ label, children }) => <div className="row"><span className="row-label">{label}</span><span>{children}</span></div>;
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={onBack}>← 一覧へ</button>
+          <span style={{ fontSize: 18, fontWeight: 500 }}>休暇申請</span>
+          <TypeBadge type={lv.leaveType} />
+          <Badge status={lv.status} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <button onClick={() => downloadPDF(lv, !showEmergency)}>📄 印刷用PDF</button>
+          <button onClick={handleDelete} style={{ color: "#a32d2d", borderColor: "#f09595" }}>🗑 削除</button>
+          {lv.status === "申請中" && <>
+            <button className="success" onClick={() => openPwd("承認済")} disabled={busy}>✅ 承認する</button>
+            <button className="danger" onClick={() => openPwd("差戻し")} disabled={busy}>↩ 差戻しする</button>
+          </>}
+        </div>
+      </div>
+
+      {busy && <div className="notify info">処理中...</div>}
+      {!busy && notify && <Notify msg={notify} />}
+
+      {isPaidLeave && lv.status === "申請中" && emp && (
+        <div className="info-bar" style={{ background: "#fff9ec", color: "#854f0b" }}>
+          💡 承認すると {lv.applicantName}様の有給残数 {dash(emp.remaining)}日 から {lv.days}日 差し引かれます（→ 残 {Number(emp.remaining) - Number(lv.days)}日）
+        </div>
+      )}
+
+      {pwdModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 380, maxWidth: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
+            <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 6 }}>{pwdModal.status === "承認済" ? "✅ 承認する" : "↩ 差戻しする"}</p>
+            <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>承認者パスワードを入力してください</p>
+            <input type="password" placeholder="パスワード" value={pwdInput} onChange={e => { setPwdInput(e.target.value); setPwdError(false); }} style={{ width: "100%", marginBottom: 8 }} autoFocus />
+            {pwdError && <p style={{ fontSize: 12, color: "#a32d2d", marginBottom: 8 }}>パスワードが違います</p>}
+            <div style={{ marginTop: 16 }}>
+              <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6, fontWeight: 500 }}>
+                {pwdModal.status === "差戻し" ? <>差戻し理由 <span className="req">*</span> <span style={{ fontSize: 11, color: "#a32d2d", fontWeight: 400 }}>（必須）</span></> : <>コメント <span style={{ fontSize: 11, color: "#aaa", fontWeight: 400 }}>（任意）</span></>}
+              </label>
+              <textarea placeholder={pwdModal.status === "差戻し" ? "差戻しの理由を入力（申請者にメール通知されます）" : "申請者へのコメント（メール通知されます）"} value={commentInput} onChange={e => setCommentInput(e.target.value)} style={{ width: "100%", minHeight: 80, resize: "vertical", fontSize: 13 }} />
+              <p style={{ fontSize: 11, color: "#888", marginTop: 4 }}>※ 入力内容は申請者へのメールに含まれます</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={closePwd} style={{ flex: 1 }}>キャンセル</button>
+              <button onClick={confirm} className={pwdModal.status === "承認済" ? "success" : "danger"} style={{ flex: 1 }}>確認</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-title">基本情報</div>
+        <Row label="休暇種類"><span style={{ fontWeight: 500, color: t.color }}>{t.label}</span></Row>
+        <Row label="申請者">{lv.applicantName}{emp && emp.department ? <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>{emp.department}</span> : null}</Row>
+        <Row label="申請日">{lv.applicationDate}</Row>
+        <Row label="期間">{lv.startDate} 〜 {lv.endDate} <span style={{ fontSize: 12, color: "#888" }}>（{lv.days}日）</span></Row>
+        {lv.reason && <div className="row" style={{ alignItems: "start" }}><span className="row-label">理由</span><span style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{lv.reason}</span></div>}
+        <Row label="緊急連絡先">{masked(lv.emergencyContact)}</Row>
+      </div>
+
+      {lv.decisionComment && (
+        <div className="card" style={{ background: lv.status === "承認済" ? "#eaf3de" : lv.status === "差戻し" ? "#fcebeb" : "#f5f4f0", border: lv.status === "承認済" ? "0.5px solid #97c459" : lv.status === "差戻し" ? "0.5px solid #f09595" : "0.5px solid #e0ddd5" }}>
+          <div className="card-title" style={{ color: lv.status === "承認済" ? "#3b6d11" : lv.status === "差戻し" ? "#a32d2d" : "#555", borderBottomColor: "transparent" }}>💬 承認者からのコメント（{lv.status}）</div>
+          <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.8, fontSize: 14, color: "#333", margin: 0 }}>{lv.decisionComment}</p>
+        </div>
+      )}
+
+      {lv.leaveType === "代休" && (
+        <div className="card" style={{ border: "0.5px solid #7fc7c9", background: "#eaf7f7" }}>
+          <div className="card-title" style={{ color: "#0d7377" }}>代休 情報（休日出勤の振替）</div>
+          <Row label="出勤したイベント名">{dash(lv.eventName)}</Row>
+          <Row label="イベント実施日（出勤日）">{dash(lv.eventDate)}</Row>
+          {lv.handover && <Row label="業務引継ぎ・対応者">{lv.handover}</Row>}
+        </div>
+      )}
+
+      {(lv.leaveType === "通常" || lv.leaveType === "長期") && (
+        <div className="card">
+          <div className="card-title">業務関連</div>
+          <Row label="有給/無給">{lv.paidType === "paid" ? "有給" : "無給"}</Row>
+          <Row label="事前/事後">{lv.timing === "advance" ? "事前申請" : "事後申請"}</Row>
+          <Row label="業務引継ぎ・対応者">{dash(lv.handover)}</Row>
+          <Row label="社用携帯の委任者">{dash(lv.phoneDelegate)}</Row>
+          <Row label="顧客への連絡">{yn(lv.customerContact)}</Row>
+        </div>
+      )}
+
+      {lv.leaveType === "長期" && (
+        <div className="card" style={{ border: "0.5px solid #c9b3e0", background: "#faf7fe" }}>
+          <div className="card-title" style={{ color: "#6b3fa0" }}>長期休暇 特別申請</div>
+          <div className="row" style={{ alignItems: "start" }}><span className="row-label">長期休暇の理由</span><span style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{dash(lv.longReason)}</span></div>
+          <Row label="長期緊急連絡先">{masked(lv.longEmergencyContact)}</Row>
+          <Row label="顧客対応者">{dash(lv.customerHandler)}</Row>
+          <Row label="業務引継ぎ者">{dash(lv.handoverPerson)}</Row>
+          <Row label="顧客への案内">{yn(lv.customerNoticeLong)}</Row>
+        </div>
+      )}
+
+      {lv.leaveType === "会社推奨" && (
+        <div className="card" style={{ border: "0.5px solid #e8c97a", background: "#fff9ec" }}>
+          <div className="card-title" style={{ color: "#854f0b" }}>会社推奨休暇（計画年休）</div>
+          <Row label="月次/無給">{lv.paidType === "paid" ? "月次（有給）" : "無給"}</Row>
+          <Row label="滞留業務">{yn(lv.pendingWork)}</Row>
+          <Row label="緊急連絡先の関係">{dash(lv.emergencyRelation)}</Row>
+        </div>
+      )}
+
+      {(lv.leaveType === "病気" || lv.leaveType === "急") && (
+        <div className="card">
+          <div className="card-title">業務対応</div>
+          <Row label="業務対応者">{dash(lv.handler)}</Row>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── List ── */
+function LeaveList({ leaves, employees, onSelect, onNew, onEmployees, onSettings, onExport, onRefresh, onAlertLow, lastSync, refreshing }) {
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterEmp, setFilterEmp] = useState("all");
+
+  const filtered = leaves.filter(l =>
+    (filterType === "all" || l.leaveType === filterType) &&
+    (filterStatus === "all" || l.status === filterStatus) &&
+    (filterEmp === "all" || l.applicantId === filterEmp)
+  );
+
+  return (
+    <div className="page">
+      <div className="app-header">
+        <div>
+          <div className="app-title-sub">株式会社ケイラボ</div>
+          <div className="app-title">休暇管理システム</div>
+          {lastSync && <div className="sync-status" style={{ marginTop: 4 }}><span className="sync-dot" /><span>最終同期: {lastSync}</span></div>}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={onRefresh} disabled={refreshing}>{refreshing ? "🔄 更新中..." : "🔄 更新"}</button>
+          <button onClick={onEmployees}>👥 社員管理</button>
+          <button onClick={onSettings}>⚙ 設定</button>
+          <button onClick={onExport}>📊 CSV出力</button>
+          <button className="primary" onClick={onNew}>＋ 休暇申請</button>
+        </div>
+      </div>
+
+      {/* 有給残数サマリー */}
+      {employees.length > 0 && (() => {
+        const lowEmps = employees.filter(e => !isNaN(Number(e.remaining)) && e.remaining !== "" && Number(e.remaining) <= 2);
+        return (
+        <div className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, paddingBottom: 8, borderBottom: "0.5px solid #e8e5de", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#888", letterSpacing: "0.06em" }}>有給休暇 残数一覧</span>
+            {lowEmps.length > 0 && (
+              <button onClick={onAlertLow} className="danger" style={{ fontSize: 12, padding: "5px 12px" }}>⚠️ 残数不足を本人に通知（{lowEmps.length}名）</button>
+            )}
+          </div>
+          {lowEmps.length > 0 && (
+            <div style={{ background: "#fcebeb", color: "#a32d2d", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+              ⚠️ 残数が2日以下の社員が <strong>{lowEmps.length}名</strong> います：{lowEmps.map(e => e.name).join("、")}
+            </div>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {employees.map(e => {
+              const rem = Number(e.remaining);
+              const has = e.remaining !== "" && e.remaining !== undefined && e.remaining !== null && !isNaN(rem);
+              const cls = !has ? "balance-ok" : rem <= 2 ? "balance-zero" : rem <= 5 ? "balance-low" : "balance-ok";
+              const warn = has && rem <= 2;
+              return (
+                <div key={e.id} className="emp-card" style={{ width: "auto", display: "flex", gap: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                  <span className={`leave-balance ${cls}`}>{warn ? "⚠️ " : ""}{dash(e.remaining)}日</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* フィルター */}
+      <div className="card">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ fontSize: 11, color: "#888" }}>種類</span>
+            <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ width: 180 }}>
+              <option value="all">すべて</option>
+              {LEAVE_TYPES.map(t => <option key={t.id} value={t.id}>{t.id}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ fontSize: 11, color: "#888" }}>ステータス</span>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ width: 130 }}>
+              <option value="all">すべて</option>
+              <option value="申請中">申請中</option>
+              <option value="承認済">承認済</option>
+              <option value="差戻し">差戻し</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ fontSize: 11, color: "#888" }}>社員</span>
+            <select value={filterEmp} onChange={e => setFilterEmp(e.target.value)} style={{ width: 160 }}>
+              <option value="all">すべて</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "3rem 0", color: "#aaa", fontSize: 14 }}>該当する休暇申請がありません。</div>
+      ) : (
+        filtered.map(l => (
+          <div key={l.id} className="list-item" onClick={() => onSelect(l.id)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                  <Badge status={l.status} />
+                  <TypeBadge type={l.leaveType} />
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>{l.applicantName}</span>
+                </div>
+                <p style={{ fontSize: 12, color: "#aaa", margin: 0 }}>{l.startDate} 〜 {l.endDate} ・ {l.days}日{(l.paidType === "paid" && (l.leaveType === "通常" || l.leaveType === "長期" || l.leaveType === "会社推奨")) ? " ・ 有給" : ""}{l.leaveType === "代休" && l.eventName ? ` ・ ${l.eventName}` : ""}</p>
+              </div>
+              <span style={{ fontSize: 18, color: "#ccc", marginLeft: 12 }}>›</span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* ── CSV ── */
+function exportCSV(leaves) {
+  const headers = ["申請日","申請者","休暇種類","開始日","終了日","日数","有給/無給","事前/事後","理由","緊急連絡先","引継ぎ/対応者","社用携帯委任","顧客連絡","長期理由","顧客対応者","引継ぎ者","顧客案内","滞留業務","業務対応者","イベント名","イベント実施日","ステータス","承認者コメント"];
+  const rows = leaves.map(l => [
+    l.applicationDate, l.applicantName, l.leaveType, l.startDate, l.endDate, l.days,
+    (l.leaveType==="病気"||l.leaveType==="急"||l.leaveType==="代休")?"":(l.paidType==="paid"?"有給":"無給"),
+    (l.timing==="advance"?"事前":l.timing==="after"?"事後":""),
+    (l.reason||"").replace(/\n/g," "), l.emergencyContact||"",
+    l.handover||"", l.phoneDelegate||"", yn(l.customerContact)==="―"?"":yn(l.customerContact),
+    (l.longReason||"").replace(/\n/g," "), l.customerHandler||"", l.handoverPerson||"",
+    l.customerNoticeLong?yn(l.customerNoticeLong):"", l.pendingWork?yn(l.pendingWork):"", l.handler||"",
+    l.eventName||"", l.eventDate||"",
+    l.status, (l.decisionComment||"").replace(/\n/g," ")
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","));
+  const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `休暇一覧_${new Date().toLocaleDateString("ja-JP").replace(/\//g,"-")}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── App ── */
+function App() {
+  if (!SHARED_BIN_ID) return <SetupScreen />;
+
+  const [view, setView] = useState("list");
+  const [leaves, setLeaves] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [selId, setSelId] = useState(null);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [lastSync, setLastSync] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const applyData = (data) => {
+    if (data && Array.isArray(data.leaves)) setLeaves(data.leaves);
+    if (data && Array.isArray(data.employees)) setEmployees(data.employees);
+  };
+
+  useEffect(() => {
+    (async () => {
+      const saved = store.get("klabo-kyuka-settings");
+      if (saved) {
+        const merged = { ...DEFAULT_SETTINGS };
+        Object.keys(saved).forEach(k => { if (saved[k]) merged[k] = saved[k]; });
+        setSettings(merged);
+      }
+      try { applyData(await getBin(SHARED_BIN_ID)); setLastSync(new Date().toLocaleTimeString("ja-JP")); }
+      catch(e) { setLoadError("クラウドからのデータ取得に失敗: " + (e.message || String(e))); }
+      setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (view !== "list" || !loaded) return;
+    const iv = setInterval(async () => {
+      try { applyData(await getBin(SHARED_BIN_ID)); setLastSync(new Date().toLocaleTimeString("ja-JP")); } catch {}
+    }, 15000);
+    return () => clearInterval(iv);
+  }, [view, loaded]);
+
+  const fetchLatest = async () => {
+    const data = await getBin(SHARED_BIN_ID);
+    return { employees: (data && data.employees) || [], leaves: (data && data.leaves) || [] };
+  };
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try { applyData(await getBin(SHARED_BIN_ID)); setLastSync(new Date().toLocaleTimeString("ja-JP")); }
+    catch(e) { alert("更新エラー: " + (e.message || String(e))); }
+    setRefreshing(false);
+  };
+
+  const addLeave = async (newLeave) => {
+    const cur = await fetchLatest();
+    const newLeaves = [newLeave, ...cur.leaves];
+    await updateBin(SHARED_BIN_ID, { employees: cur.employees, leaves: newLeaves });
+    setLeaves(newLeaves); setEmployees(cur.employees);
+    setLastSync(new Date().toLocaleTimeString("ja-JP"));
+  };
+
+  const updateLeaveStatus = async (id, status, comment) => {
+    const cur = await fetchLatest();
+    const target = cur.leaves.find(l => l.id === id);
+    const decidedAt = new Date().toISOString();
+    let newEmployees = cur.employees;
+    // 有給休暇が承認されたら残数を自動で差し引く
+    if (target && status === "承認済" && (target.leaveType === "通常" || target.leaveType === "長期" || target.leaveType === "会社推奨") && target.paidType === "paid" && !target.deducted) {
+      newEmployees = cur.employees.map(e => {
+        if (e.id === target.applicantId && e.remaining !== "" && e.remaining !== undefined && e.remaining !== null) {
+          const rem = Number(e.remaining) - Number(target.days || 0);
+          return { ...e, remaining: rem };
+        }
+        return e;
+      });
+    }
+    const newLeaves = cur.leaves.map(l => l.id === id
+      ? { ...l, status, decisionComment: comment || "", decidedAt, deducted: (status === "承認済" && (l.leaveType === "通常" || l.leaveType === "長期" || l.leaveType === "会社推奨") && l.paidType === "paid") ? true : l.deducted }
+      : l);
+    await updateBin(SHARED_BIN_ID, { employees: newEmployees, leaves: newLeaves });
+    setLeaves(newLeaves); setEmployees(newEmployees);
+    setLastSync(new Date().toLocaleTimeString("ja-JP"));
+  };
+
+  const deleteLeave = async (id) => {
+    const cur = await fetchLatest();
+    const newLeaves = cur.leaves.filter(l => l.id !== id);
+    await updateBin(SHARED_BIN_ID, { employees: cur.employees, leaves: newLeaves });
+    setLeaves(newLeaves); setEmployees(cur.employees);
+    setLastSync(new Date().toLocaleTimeString("ja-JP"));
+  };
+
+  const saveEmployees = async (emps) => {
+    const cur = await fetchLatest();
+    await updateBin(SHARED_BIN_ID, { employees: emps, leaves: cur.leaves });
+    setEmployees(emps); setLeaves(cur.leaves);
+    setLastSync(new Date().toLocaleTimeString("ja-JP"));
+    setView("list");
+  };
+
+  const saveSettings = (s) => { setSettings(s); store.set("klabo-kyuka-settings", s); setView("list"); };
+
+  const sendLowBalanceAlert = async () => {
+    const lowEmps = employees.filter(e => e.email && !isNaN(Number(e.remaining)) && e.remaining !== "" && Number(e.remaining) <= 2);
+    const noEmail = employees.filter(e => !e.email && !isNaN(Number(e.remaining)) && e.remaining !== "" && Number(e.remaining) <= 2);
+    if (lowEmps.length === 0) {
+      alert(noEmail.length > 0
+        ? `残数2日以下の社員はいますが、メールアドレスが未登録です：${noEmail.map(e=>e.name).join("、")}\n社員管理でメールを登録してください。`
+        : "残数2日以下の社員はいません。");
+      return;
+    }
+    const ejs = {
+      emailjsServiceId: settings.emailjsServiceId || "service_64db3nr",
+      emailjsTemplateId: settings.emailjsTemplateId || "template_pxbiqdi",
+      emailjsPublicKey: settings.emailjsPublicKey || "Fq3I6k806Lj82-huC",
+    };
+    let okCount = 0;
+    for (const e of lowEmps) {
+      const body = `${e.name}様
+
+有給休暇の残数が残り${e.remaining}日となりました。
+計画的なご取得をお願いいたします。
+ご不明な点は管理部までお問い合わせください。
+
+─────────────────────
+株式会社ケイラボ 休暇管理システム`;
+      const r = await sendToAll([{ email: e.email, name: e.name }], `【有給休暇 残数のお知らせ】残り${e.remaining}日`, body, ejs);
+      if (r.ok > 0) okCount++;
+    }
+    let msg = `${okCount}名に残数不足のお知らせを送信しました。`;
+    if (noEmail.length > 0) msg += `\n（メール未登録のため未送信：${noEmail.map(e=>e.name).join("、")}）`;
+    alert(msg);
+  };
+
+  if (!loaded) return <div style={{ padding: "3rem", textAlign: "center", color: "#aaa", fontSize: 14 }}>読み込み中...</div>;
+  if (loadError) return (
+    <div className="page">
+      <div className="card" style={{ background: "#fcebeb", border: "0.5px solid #f09595" }}>
+        <div className="card-title" style={{ color: "#a32d2d" }}>⚠ エラー</div>
+        <p style={{ fontSize: 13, color: "#555", lineHeight: 1.8 }}>{loadError}</p>
+        <p style={{ fontSize: 12, color: "#888", marginTop: 12 }}>SHARED_BIN_ID: <code>{SHARED_BIN_ID}</code></p>
+        <button onClick={() => window.location.reload()} style={{ marginTop: 12 }}>再試行</button>
+      </div>
+    </div>
+  );
+
+  if (view === "settings") return <SettingsView settings={settings} onSave={saveSettings} onBack={() => setView("list")} />;
+  if (view === "employees") return <EmployeeManager employees={employees} onSave={saveEmployees} onBack={() => setView("list")} />;
+  if (view === "new") return <LeaveForm employees={employees} settings={settings} onCancel={() => setView("list")} onSubmit={async (lv) => { await addLeave(lv); setView("list"); }} />;
+  if (view === "detail") return <LeaveDetail leaveId={selId} leaves={leaves} employees={employees} settings={settings} onBack={() => setView("list")} onUpdate={updateLeaveStatus} onDelete={deleteLeave} />;
+
+  return <LeaveList
+    leaves={leaves} employees={employees} lastSync={lastSync} refreshing={refreshing}
+    onRefresh={refresh}
+    onSelect={(id) => { setSelId(id); setView("detail"); }}
+    onNew={() => setView("new")}
+    onEmployees={() => setView("employees")}
+    onSettings={() => setView("settings")}
+    onAlertLow={async () => {
+      const pw = window.prompt("残数不足のお知らせメールを送信します。管理者パスワードを入力してください");
+      if (pw === null) return;
+      if (pw !== ADMIN_PASSWORD) { alert("パスワードが違います"); return; }
+      try { await sendLowBalanceAlert(); } catch(e) { alert("送信エラー: " + (e.message || String(e))); }
+    }}
+    onExport={() => {
+      const pw = window.prompt("パスワードを入力してください");
+      if (pw === null) return;
+      if (pw !== ADMIN_PASSWORD) { alert("パスワードが違います"); return; }
+      exportCSV(leaves);
+    }}
+  />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
