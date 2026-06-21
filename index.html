@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>社内稟議システム | 株式会社ケイラボ</title>
-<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -118,7 +118,7 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
+<script type="text/babel" data-type="script" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -958,7 +958,7 @@ function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onRefr
 }
 
 /* ── CSV Export ── */
-function exportCSV(apps) {
+function downloadCSV(apps) {
   const headers = ["起案日","起案者","申請者メール","件名","関連ブランド","申請金額(税込)","費用回収","回収予定日","収益見込み","収益金額","申請内容","関係者","ステータス","決裁者コメント","提出日時"];
   const rows = apps.map(a => [
     a.applicationDate,
@@ -1130,7 +1130,7 @@ function App() {
       const pw = window.prompt("パスワードを入力してください");
       if(pw === null) return;
       if(pw !== "6332") { alert("パスワードが違います"); return; }
-      exportCSV(apps);
+      downloadCSV(apps);
     }}
     onDeleteAll={async () => {
       const pw = window.prompt("削除パスワードを入力してください");
