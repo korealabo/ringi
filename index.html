@@ -958,7 +958,7 @@ function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onRefr
 }
 
 /* ── CSV Export ── */
-function downloadCSV(apps) {
+function exportCSV(apps) {
   const headers = ["起案日","起案者","申請者メール","件名","関連ブランド","申請金額(税込)","費用回収","回収予定日","収益見込み","収益金額","申請内容","関係者","ステータス","決裁者コメント","提出日時"];
   const rows = apps.map(a => [
     a.applicationDate,
@@ -1129,7 +1129,7 @@ function App() {
       const pw = window.prompt("パスワードを入力してください");
       if(pw === null) return;
       if(pw !== "6332") { alert("パスワードが違います"); return; }
-      downloadCSV(apps);
+      exportCSV(apps);
     }}
     onDeleteAll={async () => {
       const pw = window.prompt("削除パスワードを入力してください");
