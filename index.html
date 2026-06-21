@@ -118,7 +118,7 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
+<script type="text/plain" id="app-source">
 const { useState, useEffect, useCallback, useRef } = React;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1143,6 +1143,13 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  var code = document.getElementById('app-source').textContent;
+  var result = Babel.transform(code, { presets: ['react'], sourceType: 'script' });
+  (new Function(result.code))();
+});
 </script>
 </body>
 </html>
