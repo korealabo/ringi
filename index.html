@@ -910,7 +910,9 @@ function Detail({ appId, apps, onBack, onUpdate, onDelete, settings }) {
 }
 
 /* ── List ── */
-function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onRefresh, lastSync, refreshing }) {
+function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onBackup, onRefresh, lastSync, refreshing, lastBackup }) {
+  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - lastBackup) / 86400000) : null;
+  const needBackup = daysSinceBackup === null || daysSinceBackup >= 30;
   return (
     <div className="page">
       <div className="app-header">
@@ -928,10 +930,16 @@ function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onRefr
           <button onClick={onRefresh} disabled={refreshing}>{refreshing ? "🔄 更新中..." : "🔄 更新"}</button>
           <button onClick={onSettings}>⚙ 設定</button>
           <button onClick={onExport}>📊 CSV出力</button>
+          <button onClick={onBackup} style={needBackup ? { background: "#fff4e6", borderColor: "#f0c060", color: "#a86a00" } : {}}>💾 バックアップ</button>
           <button onClick={onDeleteAll} style={{ color: "#a32d2d", borderColor: "#f09595" }}>🗑 全削除</button>
           <button className="primary" onClick={onNew}>＋ 新規申請</button>
         </div>
       </div>
+      {needBackup && apps.length > 0 && (
+        <div style={{ background: "#fff8e1", color: "#a86a00", borderRadius: 8, padding: "10px 14px", fontSize: 12, marginBottom: 14, border: "0.5px solid #f0d080", lineHeight: 1.6 }}>
+          ⚠️ {lastBackup === null ? "まだバックアップを取っていません。" : `最後のバックアップから ${daysSinceBackup}日 経過しています。`}「💾 バックアップ」ボタンでデータをPCに保存することをお勧めします。
+        </div>
+      )}
       {apps.length === 0 ? (
         <div style={{ textAlign: "center", padding: "4rem 0", color: "#aaa", fontSize: 14 }}>
           申請書がありません。「新規申請」から作成してください。
@@ -1002,6 +1010,10 @@ function App() {
   const [loadError, setLoadError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastBackup, setLastBackup] = useState(() => {
+    const v = localStorage.getItem("klabo-ringi-last-backup");
+    return v ? Number(v) : null;
+  });
 
   // 初回ロード
   useEffect(() => {
@@ -1122,10 +1134,29 @@ function App() {
     apps={apps}
     lastSync={lastSync}
     refreshing={refreshing}
+    lastBackup={lastBackup}
     onRefresh={refreshApps}
     onSelect={(id) => { setSelId(id); setView("detail"); }}
     onNew={() => setView("new")}
     onSettings={() => setView("settings")}
+    onBackup={() => {
+      const pw = window.prompt("バックアップを取得します。管理者パスワードを入力してください");
+      if(pw === null) return;
+      if(pw !== "6332") { alert("パスワードが違います"); return; }
+      if(apps.length === 0) { alert("バックアップするデータがありません。"); return; }
+      const data = { apps, exportedAt: new Date().toISOString(), version: "ringi-firebase-v1" };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const dateStr = new Date().toISOString().slice(0,10);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `ringi_backup_${dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      const now = Date.now();
+      localStorage.setItem("klabo-ringi-last-backup", String(now));
+      setLastBackup(now);
+      alert(`✅ バックアップ完了！\n\nファイル：ringi_backup_${dateStr}.json\n件数：${apps.length}件\n\nダウンロードフォルダに保存されました。\n大切に保管してください。`);
+    }}
     onExport={() => {
       const pw = window.prompt("パスワードを入力してください");
       if(pw === null) return;
