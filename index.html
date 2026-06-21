@@ -920,7 +920,7 @@ function List({ apps, onSelect, onNew, onSettings, onDeleteAll, onExport, onRefr
           {lastSync && (
             <div className="sync-status" style={{ marginTop: 4 }}>
               <span className="sync-dot" />
-              <span>最終同期: {lastSync}　<span style={{ color: "#aaa" }}>（最新は「🔄 更新」で確認）</span></span>
+              <span>最終同期: {lastSync}</span>
             </div>
           )}
         </div>
@@ -1023,8 +1023,7 @@ function App() {
     })();
   }, []);
 
-  // ※ 自動更新は無効化しました（リクエスト節約のため）。
-  //    最新の状態を見るには「🔄 更新」ボタンを押してください。
+  // ※ 自動更新は無効化（リクエスト節約のため）。最新状態は「🔄 更新」ボタンで取得。
 
   // 手動更新
   const refreshApps = async () => {
