@@ -3,7 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>社内稟議システム | 株式会社ケイラボ</title>
+<script>
+// 첫 접속 시 캐시 무효화 (한 번만 자동 실행)
+(function(){
+  var KEY = "klabo-ringi-cache-v";
+  var CURRENT = "2026-06-21-final";
+  var prev = localStorage.getItem(KEY);
+  if (prev !== CURRENT) {
+    localStorage.setItem(KEY, CURRENT);
+    if (prev !== null && window.location.search.indexOf("_cb=") === -1) {
+      // 옛 캐시가 있으면 URL에 캐시버스터 붙여서 강제 새로고침
+      window.location.replace(window.location.pathname + "?_cb=" + Date.now());
+    }
+  }
+})();
+</script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
